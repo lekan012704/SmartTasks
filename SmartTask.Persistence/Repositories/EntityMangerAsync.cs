@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartTask.Persistence
+namespace SmartTask.Persistence.Repositories
 {
-    public static class ServiceRegistration
+    public class EntityMangerAsync
     {
-
     }
 }

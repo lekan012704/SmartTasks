@@ -21,7 +21,11 @@
   <ItemGroup>
     <Folder Include="Contexts\" />
     <Folder Include="Services\" />
-    <Folder Include="Repositories\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />
+    <ProjectReference Include="..\SmartTask.Identity\SmartTask.Identity.csproj" />
   </ItemGroup>
 
 </Project>

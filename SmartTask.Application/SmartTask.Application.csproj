@@ -9,16 +9,13 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="14.0.0" />
     <PackageReference Include="FluentValidation" Version="11.0.0" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Dto\" />
-    <Folder Include="Enums\" />
-    <Folder Include="Handler\CommandHandler\" />
     <Folder Include="Handler\QueryHandler\" />
-    <Folder Include="Interfaces\" />
     <Folder Include="Behaviours\" />
-    <Folder Include="Wrappers\" />
+    <Folder Include="Query\" />
   </ItemGroup>
 
 </Project>

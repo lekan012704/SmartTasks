@@ -1,12 +1,37 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SmartTask.Application.Interfaces;
+using SmartTask.Identity.Services;
+using SmartTask.Persistence.Contexts;
+using SmartTask.Persistence.Repositories;
+using SmartTask.Persistence.Services;
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SmartTask.Persistence
 {
-    public class ServiceRegistration
+    public static class ServiceRegistration
     {
+        public static void AddPersistenceInfrastructure(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            services.AddScoped<IEntityManagerAsync, EntityMangerAsync>();
+            services.AddScoped<IAuditLogRepository, AuditRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ITaskService,TaskService>();
+            services.AddTransient<IDbConnection>(sp =>
+    new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
+            services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
+
+
+        }
     }
 }
+    

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Enums;
+using SmartTask.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -12,6 +13,7 @@ namespace SmartTask.Identity.Models
 {
     public class ApplicationUser : IdentityUser
     {
+        public Guid? CompanyId { get; set; }
         public string CompanyName { get; set; }
         public string? RegistrationNumber { get; set; }
         public string? TaxIdentificationNumber { get; set; }
@@ -19,9 +21,10 @@ namespace SmartTask.Identity.Models
         public string? ContactPhone { get; set; }
         public string? CompanyAddress { get; set; }
         public CompanyType Type { get; set; }
-
+        public Company Company { get; set; }
         public bool? IsActive { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
+        public ICollection<TaskItem> AssignedTasks { get; set; }
         public string? DisabledBy { get; set; }
         public string? EnabledBy { get; set; }
         public DateTime? DateEnabled { get; set; }
@@ -33,10 +36,6 @@ namespace SmartTask.Identity.Models
         public string CreatedBy { get; set; }
         public DateTime? LastUpdated { get; set; }
         public string? UpdatedBy { get; set; }
-        public string MerchantCode { get; set; }
-        public string AgencyCode { get; set; }
-        public string AgencyName { get; set; }
-        public int? ApprovalRankingId { get; set; }
 
         public bool OwnsToken(string token)
         {

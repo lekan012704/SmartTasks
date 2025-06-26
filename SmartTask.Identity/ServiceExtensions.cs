@@ -14,6 +14,12 @@ using Microsoft.IdentityModel.Tokens;
 using SmartTask.Domain.Entities;
 using SmartTask.Identity.Contexts;
 using Microsoft.EntityFrameworkCore;
+using SmartTask.Application.Interfaces;
+using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using SmartTask.Application.Wrappers;
+using Newtonsoft.Json;
 
 namespace SmartTask.Identity
 {
@@ -30,28 +36,61 @@ namespace SmartTask.Identity
               .AddDefaultTokenProviders();
 
             // JWT Configuration
-            var jwtSettings = configuration.GetSection("JwtSettings");
-            services.Configure<JwtSettings>(jwtSettings);
+            services.Configure<JwtSettings>(configuration.GetSection("JWTSettings"));
 
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-           .AddJwtBearer(options =>
-           {
-               options.TokenValidationParameters = new TokenValidationParameters
-               {
-                   ValidateIssuer = true,
-                   ValidateAudience = true,
-                   ValidateLifetime = true,
-                   ValidateIssuerSigningKey = true,
-                   ValidIssuer = jwtSettings["Issuer"],
-                   ValidAudience = jwtSettings["Audience"],
-                   IssuerSigningKey = new SymmetricSecurityKey(key)
-               };
-           });
-            services.AddAuthorization();
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+                 .AddJwtBearer(o =>
+                 {
+                     o.RequireHttpsMetadata = false;
+                     o.SaveToken = false;
+                     o.TokenValidationParameters = new TokenValidationParameters
+                     {
+                         ValidateIssuerSigningKey = true,
+                         ValidateIssuer = true,
+                         ValidateAudience = true,
+                         ValidateLifetime = true,
+                         ClockSkew = TimeSpan.Zero,
+                         ValidIssuer = configuration["JWTSettings:Issuer"],
+                         ValidAudience = configuration["JWTSettings:Audience"],
+                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWTSettings:Key"]))
+                     };
+                     o.Events = new JwtBearerEvents()
+                     {
+                         OnAuthenticationFailed = c =>
+                         {
+                             c.NoResult();
+                             c.Response.StatusCode = 500;
+                             c.Response.ContentType = "text/plain";
+                             return c.Response.WriteAsync(c.Exception.ToString());
+                         },
+                         OnChallenge = context =>
+                         {
+                             context.HandleResponse();
+                             context.Response.StatusCode = 401;
+                             context.Response.ContentType = "application/json";
+                             var result = JsonConvert.SerializeObject(new Response<string>("You are not Authorized"));
+                             return context.Response.WriteAsync(result);
+                         },
+                         OnForbidden = context =>
+                         {
+                             context.Response.StatusCode = 403;
+                             context.Response.ContentType = "application/json";
+                             var result = JsonConvert.SerializeObject(new Response<string>("You are not authorized to access this resource"));
+                             return context.Response.WriteAsync(result);
+                         },
+                     };
+                 });
 
             // Register JwtService or token generator class
             services.AddScoped<JwtService>();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IPermissionService, PermissionService>();
+
         }
 
     }

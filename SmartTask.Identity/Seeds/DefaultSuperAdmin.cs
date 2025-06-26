@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using SmartTask.Application.Dto.Account;
+using SmartTask.Application.Enums;
 using SmartTask.Identity.Models;
 using System;
 using System.Collections.Generic;
@@ -30,9 +32,15 @@ namespace SmartTask.Identity.Seeds
                 var user = new ApplicationUser
                 {
                     UserName = superAdminEmail,
-                    Email = superAdminEmail,
-                    EmailConfirmed = true
+                    Email = superAdminEmail, 
+                    EmailConfirmed = true,
+                    CreatedBy = superAdminEmail,
+                    CompanyName = "SmartTask",
+                    CompanyId = null,
+                    IsActive = true,
+                    DateCreated = DateTime.UtcNow
                 };
+
 
                 var result = await userManager.CreateAsync(user, password);
                 if (result.Succeeded)

@@ -16,11 +16,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SmartTask.Application\SmartTask.Application.csproj" />
-    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />
+    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />  
+    <ProjectReference Include="..\SmartTask.Shared\SmartTask.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Contexts\" />
   </ItemGroup>
 
 </Project>

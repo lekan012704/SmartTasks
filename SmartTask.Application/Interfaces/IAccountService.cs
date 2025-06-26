@@ -1,4 +1,6 @@
-﻿using SmartTask.Application.Dto.Account;
+﻿using SmartTask.Application.Command;
+using SmartTask.Application.Dto.Account;
+using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Wrappers;
 using System;
 using System.Collections.Generic;
@@ -11,5 +13,7 @@ namespace SmartTask.Application.Interfaces
     public interface IAccountService
     {
         Task<Response<LoginResponse>> LoginAsync(LoginRequest request,CancellationToken cancellationToken);
+        Task<Response<List<string>>> AddPermissionAsync(PermissionDto request);
+
     }
 }

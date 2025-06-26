@@ -13,9 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Handler\QueryHandler\" />
     <Folder Include="Behaviours\" />
-    <Folder Include="Query\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />
   </ItemGroup>
 
 </Project>

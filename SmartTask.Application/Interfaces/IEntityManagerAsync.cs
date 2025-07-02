@@ -18,6 +18,7 @@ namespace SmartTask.Application.Interfaces
     public interface IEntityManagerAsync
     {
         Task<Response<CompanyResponse>> RegisterCompanyAsync(CompanyRequest request);
+        Task<Response<List<string>>> AddPermissionAsync(PermissionDto request);
         Task<Response<UserResponseDto>> RegisterUserAsync(UserRequestDto request);
         Task<Response<List<TaskDto>>> GetTaskByCompanyIdAsync(GetTaskByIdQuery request);
         Task<Response<List<TaskDto>>> GetTasksByAssignedUserAsync(GetTasksByAssignedUserQuery request);
@@ -25,6 +26,7 @@ namespace SmartTask.Application.Interfaces
         Task<Response<List<TaskCompletionStatus>>> GetFilteredTasksAsync(WeeklyStatsFilter request);
         Task<Response<List<OverdueTaskStatsDto>>> GetOverdueTasksAsync();
         Task<Response<List<OverdueTaskStatsDto>>> GetFilteredOverdueTasksAsync(FilteredOverdueTask request);
+        Task<Response<List<CompanyTypeDto>>> GetAllCompanyTypeAsync();
 
 
 

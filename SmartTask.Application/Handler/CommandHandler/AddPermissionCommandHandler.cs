@@ -12,8 +12,8 @@ namespace SmartTask.Application.Handler.CommandHandler
 {
     public class AddPermissionCommandHandler :IRequestHandler<AddPermissionCommand,Response<List<string>>>
     {
-       private readonly IAccountService _account;
-        public AddPermissionCommandHandler(IAccountService account)
+       private readonly IEntityManagerAsync _account;
+        public AddPermissionCommandHandler(IEntityManagerAsync account)
         {
             _account = account;
         }

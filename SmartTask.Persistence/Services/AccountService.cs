@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace SmartTask.Identity.Services
 {
+    using Azure.Core;
     using Microsoft.AspNetCore.Identity;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
@@ -19,7 +20,6 @@ namespace SmartTask.Identity.Services
     using SmartTask.Application.Wrappers;
     using SmartTask.Domain.Constants;
     using SmartTask.Domain.Entities;
-    using SmartTask.Identity.Contexts;
     using SmartTask.Identity.Models;
     using SmartTask.Shared.Helpers;
     using System;
@@ -27,6 +27,7 @@ namespace SmartTask.Identity.Services
     using System.Security.Claims;
     using System.Text;
     using System.Threading.Tasks;
+    using static SmartTask.Domain.Constants.Permissions;
 
     namespace SmartTasks.Infrastructure.Identity.Managers
     {
@@ -35,24 +36,23 @@ namespace SmartTask.Identity.Services
             private readonly UserManager<ApplicationUser> _userManager;
             private readonly SignInManager<ApplicationUser> _signInManager;
             private readonly RoleManager<IdentityRole> _roleManager;
-            private readonly IdentityContext _identityContext;
             private readonly JwtService _jwtService;
             private readonly ILogger<AccountService> _logger;
+            private readonly IEntityManagerAsync _entityManager;
 
             public AccountService(
                 UserManager<ApplicationUser> userManager,
                 SignInManager<ApplicationUser> signInManager,
                 RoleManager<IdentityRole> roleManager,
-                IdentityContext identityContext,
                 JwtService jwtService,
-                ILogger<AccountService> logger)
+                ILogger<AccountService> logger,IEntityManagerAsync entityManagerAsync)
             {
                 _userManager = userManager;
                 _signInManager = signInManager;
                 _roleManager = roleManager;
-                _identityContext = identityContext;
                 _jwtService = jwtService;
                 _logger = logger;
+                _entityManager = entityManagerAsync;
             }
 
             public async Task<Response<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
@@ -97,56 +97,7 @@ namespace SmartTask.Identity.Services
                     return ApplicationConstants.FailureMessage<LoginResponse>(null, "An error occurred while processing your request.");
                 }
             }
-            public async Task<Response<List<string>>> AddPermissionAsync(PermissionDto request)
-            {
-                try
-                {
-                    // Validate role
-                    var role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Name == request.RoleName);
-                    if (role == null)
-                    {
-                        return ApplicationConstants.NotFoundMessage<List<string>>(null, $"Role '{request.RoleName}' not found.");
-                    }
-
-                    // Fetch requested permissions from IdentityContext
-                    var permissions = await _identityContext.Permission
-                        .Where(p => request.Permissions.Contains(p.Name))
-                        .ToListAsync();
-
-                    var addedPermissions = new List<string>();
-
-                    foreach (var permission in permissions)
-                    {
-                        var exists = await _identityContext.RolePermission
-                            .AnyAsync(rp => rp.RoleId == role.Id && rp.PermissionId == permission.Id);
-
-                        if (!exists)
-                        {
-                            _identityContext.RolePermission.Add(new RolePermission
-                            {
-                                RoleId = role.Id,
-                                PermissionId = permission.Id
-                            });
-
-                            addedPermissions.Add(permission.Name);
-                        }
-                    }
-
-                    if (addedPermissions.Any())
-                    {
-                        await _identityContext.SaveChangesAsync();
-                        return ApplicationConstants.SuccessMessage(addedPermissions, $"Added {addedPermissions.Count} permission(s) to role '{role.Name}'.");
-                    }
-
-                    return ApplicationConstants.FailureMessage(addedPermissions, $"No new permissions were added to role '{role.Name}' (all already assigned).");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An error occurred while adding permissions to the role.");
-                    return ApplicationConstants.FailureMessage<List<string>>(null, $"An error occurred while adding permissions to role '{request.RoleName}'.");
-                }
-            }
-
+            
 
         }
     }

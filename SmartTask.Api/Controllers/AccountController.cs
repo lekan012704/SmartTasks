@@ -25,6 +25,12 @@ namespace SmartTask.Api.Controllers
         {
             _mediator = mediator;
         }
+        [HttpGet("get-all-company-types")]
+        public async Task<IActionResult> GetAllCompanyTypes()
+        {
+            var result = await _mediator.Send(new GetCompanyTypesQuery());
+            return Ok(result);
+        }
         [HttpPost("login")]
 
         public async Task<IActionResult> Login([FromBody] LoginRequest request)

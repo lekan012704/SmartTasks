@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartTask.Application.Interfaces;
 using SmartTask.Identity.Services;
+using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
 using SmartTask.Persistence.Contexts;
 using SmartTask.Persistence.Repositories;
 using SmartTask.Persistence.Services;
@@ -26,9 +27,13 @@ namespace SmartTask.Persistence
             services.AddScoped<IAuditLogRepository, AuditRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ITaskService,TaskService>();
+            // Register JwtService or token generator class
+            services.AddScoped<JwtService>();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IRoleService, RoleService>();
             services.AddTransient<IDbConnection>(sp =>
     new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
+            services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));    
 
 
         }

@@ -13,7 +13,7 @@ namespace SmartTask.Application.Interfaces
     public interface IAccountService
     {
         Task<Response<LoginResponse>> LoginAsync(LoginRequest request,CancellationToken cancellationToken);
-        Task<Response<List<string>>> AddPermissionAsync(PermissionDto request);
+
 
     }
 }

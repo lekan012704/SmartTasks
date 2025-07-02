@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SmartTask.Domain.Constants;
-using SmartTask.Identity.Contexts;
+using SmartTask.Persistence.Contexts;
 
 public static class RolePermissionSeeder
 {
@@ -72,7 +72,7 @@ public static class RolePermissionSeeder
     };
 
     public static async Task SeedAsync(
-        IdentityContext identityContext,
+        ApplicationDbContext identityContext,
         RoleManager<IdentityRole> roleManager,
         ILogger logger)
     {

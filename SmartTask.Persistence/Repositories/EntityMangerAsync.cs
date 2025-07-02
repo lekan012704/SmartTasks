@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using SmartTask.Application.Command;
 using SmartTask.Application.Command.Task;
 using SmartTask.Application.Constants;
+using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Dto.Task;
@@ -17,10 +18,8 @@ using SmartTask.Application.Query;
 using SmartTask.Application.Wrappers;
 using SmartTask.Domain.Constants;
 using SmartTask.Domain.Entities;
-using SmartTask.Identity.Migrations;
 using SmartTask.Identity.Models;
 using SmartTask.Persistence.Contexts;
-using SmartTask.Persistence.Migrations;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -43,7 +42,7 @@ namespace SmartTask.Persistence.Repositories
         private readonly IDbConnection db;
         private readonly IAuditLogRepository _auditLogRepo;
         private readonly IUnitOfWork _unitOfWork;
-        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo,IUnitOfWork unitOfWork)
+        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -55,7 +54,7 @@ namespace SmartTask.Persistence.Repositories
             _auditLogRepo = auditLogRepo;
             _unitOfWork = unitOfWork;
         }
-     
+
 
         public async Task<Response<CompanyResponse>> RegisterCompanyAsync(CompanyRequest request)
         {
@@ -77,7 +76,10 @@ namespace SmartTask.Persistence.Repositories
                     Name = request.CompanyName,
                     Email = request.Email,
                     PhoneNumber = request.PhoneNumber,
-                    Address = request.Address
+                    Address = request.Address,
+                    Description = request.Description,
+                    Type = (Application.Enums.CompanyType)request.CompanyType,
+                    Country = request.Country
                 };
 
                 await _unitOfWork.Companies.AddAsync(company);
@@ -95,7 +97,6 @@ namespace SmartTask.Persistence.Repositories
                     Type = request.CompanyType,
                     PhoneNumber = request.PhoneNumber
                 };
-
                 var result = await _userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)
                 {
@@ -115,7 +116,7 @@ namespace SmartTask.Persistence.Repositories
                 await _userManager.AddToRoleAsync(user, role);
 
                 // Commit changes using Unit of Work
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 var data = new CompanyResponse
@@ -135,7 +136,7 @@ namespace SmartTask.Persistence.Repositories
             }
         }
 
-     
+
 
         public async Task<bool> UserExistsInCompanyAsync(string email)
         {
@@ -257,7 +258,7 @@ namespace SmartTask.Persistence.Repositories
         {
             try
             {
-              
+
                 var tasks = await _unitOfWork.Tasks.GetQueryable()
                     .Where(t => t.AssignedUserId == request.AssignedUserId && t.isActive)
                     .Select(t => new TaskDto
@@ -405,7 +406,81 @@ namespace SmartTask.Persistence.Repositories
                 return ApplicationConstants.FailureMessage<List<OverdueTaskStatsDto>>(null, "An error occurred while filtering overdue tasks.");
             }
         }
-         
+        public async Task<Response<List<CompanyTypeDto>>> GetAllCompanyTypeAsync()
+        {
+            try
+            {
+                var companyTypes = Enum.GetValues(typeof(Application.Enums.CompanyType))
+                    .Cast<Application.Enums.CompanyType>()
+                    .Select(ct => new CompanyTypeDto
+                    {
+                        Id = (int)ct,
+                        Name = ct.ToString()
+                    })
+                    .ToList();
+                if (!companyTypes.Any())
+                {
+                    return ApplicationConstants.FailureMessage<List<CompanyTypeDto>>(null, "No company types found.");
+                }
+                return ApplicationConstants.SuccessMessage(companyTypes, "Company types retrieved successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving company types: {Message}", ex.Message);
+                return ApplicationConstants.FailureMessage<List<CompanyTypeDto>>(null, "An error occurred while retrieving company types.");
+            }
+
+        }
+        public async Task<Response<List<string>>> AddPermissionAsync(PermissionDto request)
+        {
+            try
+            {
+                // Validate role
+                var role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Name == request.RoleName);
+                if (role == null)
+                {
+                    return ApplicationConstants.NotFoundMessage<List<string>>(null, $"Role '{request.RoleName}' not found.");
+                }
+
+                // Fetch requested permissions from IdentityContext
+                var permissions = await _context.Permission
+                    .Where(p => request.Permissions.Contains(p.Name))
+                    .ToListAsync();
+
+                var addedPermissions = new List<string>();
+
+                foreach (var permission in permissions)
+                {
+                    var exists = await _context.RolePermission
+                        .AnyAsync(rp => rp.RoleId == role.Id && rp.PermissionId == permission.Id);
+
+                    if (!exists)
+                    {
+                        _context.RolePermission.Add(new RolePermission
+                        {
+                            RoleId = role.Id,
+                            PermissionId = permission.Id
+                        });
+
+                        addedPermissions.Add(permission.Name);
+                    }
+                }
+
+                if (addedPermissions.Any())
+                {
+                    await _context.SaveChangesAsync();
+                    return ApplicationConstants.SuccessMessage(addedPermissions, $"Added {addedPermissions.Count} permission(s) to role '{role.Name}'.");
+                }
+
+                return ApplicationConstants.FailureMessage(addedPermissions, $"No new permissions were added to role '{role.Name}' (all already assigned).");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while adding permissions to the role.");
+                return ApplicationConstants.FailureMessage<List<string>>(null, $"An error occurred while adding permissions to role '{request.RoleName}'.");
+            }
+        }
+
     }
 }
 

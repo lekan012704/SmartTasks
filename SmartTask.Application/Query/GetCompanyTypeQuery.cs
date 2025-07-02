@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using SmartTask.Application.Dto.Task;
+using SmartTask.Application.Dto;
 using SmartTask.Application.Wrappers;
 using System;
 using System.Collections.Generic;
@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 
 namespace SmartTask.Application.Query
 {
-    public record GetTasksByAssignedUserQuery(Guid CompanyId, string AssignedUserId) : IRequest<Response<List<TaskDto>>>;
+    public class GetCompanyTypesQuery : IRequest<Response<List<CompanyTypeDto>>> { }
 }

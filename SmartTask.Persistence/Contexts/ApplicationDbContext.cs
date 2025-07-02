@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Interfaces;
 using SmartTask.Domain.Constants;
 using SmartTask.Domain.Entities;
@@ -32,13 +33,16 @@ namespace SmartTask.Persistence.Contexts
         public virtual DbSet<Company> Company { get; set; }
         public virtual DbSet<TaskItem> TaskItem { get; set; }
         public virtual DbSet<AuditLog> AuditLog { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Permission> Permission { get; set; }
+        public DbSet<RolePermission> RolePermission { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder); // Make sure to call this first
 
             // Configure relationship here:
-            builder.Entity<ApplicationUser>()
+            builder.Entity<ApplicationUser>()   
                 .HasOne(u => u.Company)
                 .WithMany()
                 .HasForeignKey(u => u.CompanyId)
@@ -56,6 +60,21 @@ namespace SmartTask.Persistence.Contexts
         .WithMany(u => u.AssignedTasks) // Optional navigation
         .HasForeignKey(t => t.AssignedUserId)
         .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<RolePermission>(entity =>
+            {
+                entity.HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+                entity.HasOne(rp => rp.Role)
+                      .WithMany() // Or .WithMany(r => r.RolePermissions) if you add navigation
+                      .HasForeignKey(rp => rp.RoleId)
+                      .HasConstraintName("FK_RolePermission_Roles_RoleId")
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(rp => rp.Permission)
+                      .WithMany(p => p.RolePermission)
+                      .HasForeignKey(rp => rp.PermissionId)
+                      .HasConstraintName("FK_RolePermission_Permissions_PermissionId")
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 

@@ -13,5 +13,8 @@ namespace SmartTask.Application.Interfaces
         IGenericRepositoryAsync<Company> Companies { get; }
         IGenericRepositoryAsync<AuditLog> Audit { get; }
         Task<int> SaveChangesAsync();
+        Task BeginTransactionAsync();
+        Task CommitTransactionAsync();
+        Task RollbackTransactionAsync();
     }
 }

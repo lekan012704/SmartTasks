@@ -18,7 +18,8 @@ namespace SmartTask.Domain.Entities
         public TaskStatuses Status { get; set; } = TaskStatuses.New;
         public TaskPriority Priority { get; set; } = TaskPriority.Low;
         public string CreatedBy { get; set; }   
-        public Guid AssignedUserId { get; set; }
+        public string? AssignedUserId { get; set; }
+        public string Comment { get; set; } = string.Empty;
         public Guid CompanyId { get; set; } 
         public Company Company { get; set; }
         public bool isActive { get; set; } = true;

@@ -5,9 +5,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartTask.Domain.Constants;
 using SmartTask.Domain.Entities;
-using SmartTask.Identity.Contexts;
-using SmartTask.Identity.Migrations;
 using SmartTask.Identity.Models;
+using SmartTask.Persistence.Contexts;
 using SmartTask.Shared.Helpers;
 using System;
 using System.Collections.Generic;
@@ -23,9 +22,9 @@ namespace SmartTask.Identity.Services
     {
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IdentityContext _identitycontext;
+        private readonly ApplicationDbContext _identitycontext;
         private readonly JwtSettings _jwtSettings;
-        public JwtService(IConfiguration configuration, UserManager<ApplicationUser> userManager, IdentityContext identitycontext, IOptions<JwtSettings> jwtSettings)
+        public JwtService(IConfiguration configuration, UserManager<ApplicationUser> userManager, ApplicationDbContext identitycontext, IOptions<JwtSettings> jwtSettings)
         {
             _configuration = configuration;
             _userManager = userManager;

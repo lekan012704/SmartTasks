@@ -21,12 +21,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartTask.Application\SmartTask.Application.csproj" />
-    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />  
+    <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />
     <ProjectReference Include="..\SmartTask.Shared\SmartTask.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Contexts\" />
+    <Folder Include="Migrations\" />
+    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

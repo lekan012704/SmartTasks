@@ -13,7 +13,7 @@ namespace SmartTask.Application.Dto.Task
             public string? Description { get; set; }
             public string? Status { get; set; }  // enum as string
             public string? Priority { get; set; } // enum as string
-            public Guid AssignedUserId { get; set; }
+            public string AssignedUserId { get; set; }
             public DateTime? DueDate { get; set; }
             public string UpdatedBy { get; set; }
         }

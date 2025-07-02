@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartTask.Identity.Models;
-using SmartTask.Identity.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using SmartTask.Domain.Entities;
-using SmartTask.Identity.Contexts;
 using Microsoft.EntityFrameworkCore;
 using SmartTask.Application.Interfaces;
-using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using SmartTask.Application.Wrappers;
@@ -27,14 +24,6 @@ namespace SmartTask.Identity
     {
         public static void AddIdentityInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddDbContext<IdentityContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(IdentityContext).Assembly.FullName)));
-            services.AddIdentity<ApplicationUser, IdentityRole>()
-              .AddEntityFrameworkStores<IdentityContext>()
-              .AddDefaultTokenProviders();
-
             // JWT Configuration
             services.Configure<JwtSettings>(configuration.GetSection("JWTSettings"));
 
@@ -85,11 +74,7 @@ namespace SmartTask.Identity
                      };
                  });
 
-            // Register JwtService or token generator class
-            services.AddScoped<JwtService>();
-            services.AddScoped<IAccountService, AccountService>();
-            services.AddScoped<IRoleService, RoleService>();
-            services.AddScoped<IPermissionService, PermissionService>();
+    
 
         }
 

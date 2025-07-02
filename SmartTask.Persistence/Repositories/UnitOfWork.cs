@@ -1,4 +1,7 @@
-﻿using SmartTask.Application.Interfaces;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using SmartTask.Application.Interfaces;
 using SmartTask.Domain.Entities;
 using SmartTask.Persistence.Contexts;
 using System;
@@ -11,29 +14,48 @@ namespace SmartTask.Persistence.Repositories
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _appContext;
 
         public IGenericRepositoryAsync<TaskItem> Tasks { get; }
         public IGenericRepositoryAsync<Company> Companies { get; }
         public IGenericRepositoryAsync<AuditLog> Audit { get; }
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(ApplicationDbContext appContext)
         {
-            _context = context;
-            Tasks = new GenericRepositoryAsync<TaskItem>(_context);
-            Companies = new GenericRepositoryAsync<Company>(_context);
-            Audit = new GenericRepositoryAsync<AuditLog>(_context);
+            _appContext = appContext;
+
+            Tasks = new GenericRepositoryAsync<TaskItem>(_appContext);
+            Companies = new GenericRepositoryAsync<Company>(_appContext);
+            Audit = new GenericRepositoryAsync<AuditLog>(_appContext);
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            var transaction = await _appContext.Database.BeginTransactionAsync();
+            await _appContext.Database.UseTransactionAsync(transaction.GetDbTransaction());
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            await _appContext.Database.CommitTransactionAsync();
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            await _appContext.Database.RollbackTransactionAsync();
         }
 
         public async Task<int> SaveChangesAsync()
         {
-            return await _context.SaveChangesAsync();
+            var changes1 = await _appContext.SaveChangesAsync();
+            return changes1;
         }
 
         public void Dispose()
         {
-            _context.Dispose();
+            _appContext.Dispose();
         }
     }
+
 
 }

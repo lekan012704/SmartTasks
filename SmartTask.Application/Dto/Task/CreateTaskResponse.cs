@@ -11,7 +11,7 @@ namespace SmartTask.Application.Dto.Task
         public Guid TaskId { get; set; }
         public string Title { get; set; }
         public string Status { get; set; }
-        public Guid AssignedUserId { get; set; }
+        public string AssignedUserId { get; set; }
         public DateTime DateCreated { get; set; }
     }
 }

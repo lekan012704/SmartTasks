@@ -2,9 +2,11 @@
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using SmartTask.Application;
+using SmartTask.Application.Interfaces;
 using SmartTask.Identity;
-using SmartTask.Identity.Contexts;
+using SmartTask.Identity.Models;
 using SmartTask.Identity.Seeds;
+using SmartTask.Identity.Services;
 using SmartTask.Persistence;
 using SmartTask.Persistence.Contexts;
 using SmartTask.Persistence.Services;
@@ -20,9 +22,23 @@ namespace SmartTask.Api
 
             // Add services to the container.
             builder.Services.AddIdentityInfrastructure(builder.Configuration);
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+             .AddEntityFrameworkStores<ApplicationDbContext>()
+             .AddDefaultTokenProviders();
+            builder.Services.AddScoped<IPermissionService, PermissionService>();
             builder.Services.AddPersistenceInfrastructure(builder.Configuration);
             builder.Services.AddSharedInfrastructure(builder.Configuration);
             builder.Services.AddControllers();
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin() // Or set to your frontend domain
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
+
             // Add Hangfire and its storage (SQL Server in this case)
             builder.Services.AddHangfire(config =>
                 config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -62,10 +78,6 @@ namespace SmartTask.Api
     });
             });
 
-
-
-
-
                 var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -82,7 +94,7 @@ namespace SmartTask.Api
                 await DefaultSuperAdmin.SeedAsync(services);
 
                 // Get required services for permission seeding
-                var dbContext = services.GetRequiredService<IdentityContext>();
+                var dbContext = services.GetRequiredService<ApplicationDbContext>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
                 var loggerFactory = services.GetRequiredService<ILoggerFactory>();
                 var logger = loggerFactory.CreateLogger("RolePermissionSeeder");
@@ -97,8 +109,10 @@ namespace SmartTask.Api
                 }
             }
 
-                
+           
             app.UseHttpsRedirection();
+            app.UseRouting();
+            app.UseCors();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();

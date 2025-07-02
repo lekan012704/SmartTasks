@@ -24,7 +24,6 @@ namespace SmartTask.Persistence.Repositories
         public virtual async Task<T> AddAsync(T entity)
         {
             await _context.Set<T>().AddAsync(entity);
-            await _context.SaveChangesAsync();
             return entity;
         }
         public virtual async Task<IReadOnlyList<T>> GetAllAsync()
@@ -34,15 +33,14 @@ namespace SmartTask.Persistence.Repositories
         public virtual async Task UpdateAsync(T entity)
         {
             _context.Set<T>().Update(entity);
-            await _context.SaveChangesAsync();
         }
         public virtual async Task<T> UpdateAsync(long id)
         {
-            var entity = await _context.Set<T>().FindAsync(id);
+            var entity = await GetByIdAsync((int)id);
+
             if (entity != null)
             {
                _context.Entry(entity).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
                 return entity;
             }
             else
@@ -53,7 +51,6 @@ namespace SmartTask.Persistence.Repositories
         public virtual async Task DeleteAsync(T entity)
         {
             _context.Set<T>().Remove(entity);
-            await _context.SaveChangesAsync();
         }
         public virtual async Task<T> DeleteAsync(long id)
         {
@@ -61,7 +58,6 @@ namespace SmartTask.Persistence.Repositories
             if (entity != null)
             {
                 _context.Set<T>().Remove(entity);
-                await _context.SaveChangesAsync();
                 return entity;
             }
             else

@@ -2,21 +2,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SmartTask.Application.Interfaces;
-using SmartTask.Identity.Contexts;
 using SmartTask.Identity.Models;
+using SmartTask.Persistence.Contexts;
 using System.Security.Claims;
 
 namespace SmartTask.Identity.Services
 {
     public class PermissionService : IPermissionService
     {
-        private readonly IdentityContext _db;
+        private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<PermissionService> _logger;
 
         public PermissionService(
-            IdentityContext db,
+            ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             ILogger<PermissionService> logger)

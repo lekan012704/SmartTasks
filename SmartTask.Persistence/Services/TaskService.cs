@@ -6,6 +6,7 @@ using SmartTask.Application.Constants;
 using SmartTask.Application.Dto.Task;
 using SmartTask.Application.Enums;
 using SmartTask.Application.Interfaces;
+using SmartTask.Application.Query;
 using SmartTask.Application.Wrappers;
 using SmartTask.Domain.Entities;
 using SmartTask.Shared.Services;
@@ -35,7 +36,6 @@ namespace SmartTask.Persistence.Services
         {
             try
             {
-
                 if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
                 {
                     return ApplicationConstants.FailureMessage<CreateTaskResponse>(null,

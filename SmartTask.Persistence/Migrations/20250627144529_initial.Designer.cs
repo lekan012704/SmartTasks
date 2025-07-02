@@ -12,8 +12,8 @@ using SmartTask.Persistence.Contexts;
 namespace SmartTask.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250623083521_AddUpdatedAtToTasks")]
-    partial class AddUpdatedAtToTasks
+    [Migration("20250627144529_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -247,6 +247,10 @@ namespace SmartTask.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -276,7 +280,10 @@ namespace SmartTask.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("AssignedUserEmail")
+                    b.Property<string>("AssignedUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Comment")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -306,6 +313,9 @@ namespace SmartTask.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("OverdueReminderSent")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -325,6 +335,8 @@ namespace SmartTask.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedUserId");
 
                     b.HasIndex("CompanyId");
 
@@ -520,6 +532,11 @@ namespace SmartTask.Persistence.Migrations
 
             modelBuilder.Entity("SmartTask.Domain.Entities.TaskItem", b =>
                 {
+                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                        .WithMany("AssignedTasks")
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SmartTask.Domain.Entities.Company", "Company")
                         .WithMany()
                         .HasForeignKey("CompanyId")
@@ -541,6 +558,8 @@ namespace SmartTask.Persistence.Migrations
 
             modelBuilder.Entity("SmartTask.Identity.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("AssignedTasks");
+
                     b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618

@@ -590,14 +590,50 @@ namespace SmartTask.Persistence.Repositories
 
             return new Response<string>("User deactivated successfully.");
         }
-        public async Task<Guid> CreateOrderAsync(CreateOrderCommand request,CancellationToken cancellationToken)
+        public async Task<Guid> CreateOrderAsync(CreateOrderCommand request)
         {
-            
+            try
+            {
+
+
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                decimal subtotal = request.OrderItems.Sum(item => item.Price * item.Quantity);
+                decimal totalDue = subtotal + request.DeliveryFee;
+
+                var orderItemsJson = JsonConvert.SerializeObject(request.OrderItems);
+
+                var order = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    Status = OrderStatus.NewOrder,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CustomerName = request.CustomerName,
+                    WhatsAppNumber = request.WhatsAppNumber,
+                    DeliveryAddress = request.DeliveryAddress,
+                    OrderItemsJson = orderItemsJson,
+                    Subtotal = subtotal,
+                    DeliveryFee = request.DeliveryFee,
+                    TotalDue = totalDue,
+                    ApplicationUserId = companyId.ToString(),
+                };
+
+                _context.Order.Add(order);
+                await _unitOfWork.SaveChangesAsync();
+                return order.Id;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("");
+            }
         }
 
     }
 
-}
+    }
 
 
 

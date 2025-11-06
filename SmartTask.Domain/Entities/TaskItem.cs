@@ -13,7 +13,7 @@ namespace SmartTask.Domain.Entities
         public string Title { get; set; }
         public string Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime DueDate { get; set; }
+        public DateTime? DueDate { get; set; }
         public bool IsCompleted { get; set; }
         public TaskStatuses Status { get; set; } = TaskStatuses.New;
         public TaskPriority Priority { get; set; } = TaskPriority.Low;
@@ -27,6 +27,8 @@ namespace SmartTask.Domain.Entities
         public DateTime? CompletedAt { get; set; }
         public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
         public bool OverdueReminderSent { get; set; } = false;
+        public Guid ProjectId { get; set; }
+        public virtual Project? Project { get; set; }
 
     }
 }

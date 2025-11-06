@@ -19,6 +19,9 @@ namespace SmartTask.Persistence.Repositories
         public IGenericRepositoryAsync<TaskItem> Tasks { get; }
         public IGenericRepositoryAsync<Company> Companies { get; }
         public IGenericRepositoryAsync<AuditLog> Audit { get; }
+        public IGenericRepositoryAsync<Project> Project { get; }
+        public IGenericRepositoryAsync<ProjectMember> ProjectMember { get; }
+        public IGenericRepositoryAsync<Sprint> Sprint { get; }
 
         public UnitOfWork(ApplicationDbContext appContext)
         {
@@ -27,6 +30,9 @@ namespace SmartTask.Persistence.Repositories
             Tasks = new GenericRepositoryAsync<TaskItem>(_appContext);
             Companies = new GenericRepositoryAsync<Company>(_appContext);
             Audit = new GenericRepositoryAsync<AuditLog>(_appContext);
+            Project = new GenericRepositoryAsync<Project>(_appContext);
+            ProjectMember = new GenericRepositoryAsync<ProjectMember>(_appContext);
+            Sprint = new GenericRepositoryAsync<Sprint>(_appContext);
         }
 
         public async Task BeginTransactionAsync()

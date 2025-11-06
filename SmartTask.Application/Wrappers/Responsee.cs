@@ -22,6 +22,12 @@ namespace SmartTask.Application.Wrappers
             Succeeded = false;
             Message = message;
         }
+        public static Response<T> Success(T data, string message = null) =>
+          new Response<T> { Succeeded = true, Data = data, Message = message };
+
+        public static Response<T> Failure(string message, List<string> errors = null) =>
+            new Response<T> { Succeeded = false, Message = message, Errors = errors };
+
         public int StatusCode { get; set; }
         public string ResponseCode { get; set; }
         public bool Succeeded { get; set; }

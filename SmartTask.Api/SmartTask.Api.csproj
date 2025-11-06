@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SmartTask.Identity\SmartTask.Identity.csproj" />
     <ProjectReference Include="..\SmartTask.Persistence\SmartTask.Persistence.csproj" />
     <ProjectReference Include="..\SmartTask.Shared\SmartTask.Shared.csproj" />
   </ItemGroup>

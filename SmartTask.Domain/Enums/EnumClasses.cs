@@ -29,6 +29,18 @@ namespace SmartTask.Application.Enums
         Blocked = 4,
         OnHold = 5
     }
+    public enum ProjectStatus
+    {
+        Planning = 1,
+        Active = 2,
+        Completed = 3,
+        Archived = 4
+    }
+    public enum ProjectVisibility
+    { 
+       Private = 1,
+       Public = 2   
+    }
+
 
 }
-    

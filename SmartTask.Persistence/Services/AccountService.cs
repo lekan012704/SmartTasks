@@ -20,8 +20,7 @@ namespace SmartTask.Identity.Services
     using SmartTask.Application.Wrappers;
     using SmartTask.Domain.Constants;
     using SmartTask.Domain.Entities;
-    using SmartTask.Identity.Models;
-    using SmartTask.Shared.Helpers;
+    using SmartTask.Domain.Models;
     using System;
     using System.IdentityModel.Tokens.Jwt;
     using System.Security.Claims;
@@ -63,7 +62,7 @@ namespace SmartTask.Identity.Services
                     var user = await _userManager.FindByEmailAsync(request.Email);
                     if (user == null)
                     {
-                        response.Message = "Invalid Credentials";
+                        response.Message = "Invalid Credentials";           
                         response.Succeeded = false;
                         return response;
                     }
@@ -81,7 +80,7 @@ namespace SmartTask.Identity.Services
                         .Where(c => c.Type == "permission")
                         .Select(c => c.Value)
                         .Distinct()
-                        .ToList();
+                        .ToList();  
 
                     var loginResponse = new LoginResponse
                     {

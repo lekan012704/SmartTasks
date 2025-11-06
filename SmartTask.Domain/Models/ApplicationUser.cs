@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Enums;
 using SmartTask.Domain.Entities;
 using System;
@@ -9,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartTask.Identity.Models
+namespace SmartTask.Domain.Models
 {
     public class ApplicationUser : IdentityUser
     {
@@ -18,10 +17,11 @@ namespace SmartTask.Identity.Models
         public string? RegistrationNumber { get; set; }
         public string? TaxIdentificationNumber { get; set; }
         public string? ContactEmail { get; set; }
+        public string? FullName { get; set; }
         public string? ContactPhone { get; set; }
         public string? CompanyAddress { get; set; }
         public CompanyType Type { get; set; }
-        public Company Company { get; set; }
+        public Company Company { get; set; }    
         public bool? IsActive { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
         public ICollection<TaskItem> AssignedTasks { get; set; }

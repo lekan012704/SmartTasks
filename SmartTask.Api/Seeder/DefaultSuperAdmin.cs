@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Enums;
-using SmartTask.Identity.Models;
+using SmartTask.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;

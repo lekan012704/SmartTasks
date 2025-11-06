@@ -14,5 +14,7 @@ namespace SmartTask.Application.Dto.Account
         public string PhoneNumber { get; set; }
         public string UserName { get; set; }
         public string Role { get; set; }
+        public DateTime DateCreated { get; set; }
+        public bool IsActive { get; set; }
     }
 }

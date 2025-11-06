@@ -2,18 +2,21 @@
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SmartTask.Api.Filter;
 using SmartTask.Application.Command;
+using SmartTask.Application.Constants;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Query;
 using SmartTask.Domain.Constants;
+using System.Threading.Tasks;
 
 namespace SmartTask.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "SuperAdmin")]
+    // [Authorize(Roles = "SuperAdmin")]
     public class RoleController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -85,6 +88,27 @@ namespace SmartTask.Api.Controllers
         {
             var result = await _mediator.Send(new GetUsersInRoleQuery(roleId));
             return Ok(result);
+        }
+        [HasPermission(Permissions.User.AssignRole)]
+        [HttpPost("assign-to-role")]
+        public async Task<IActionResult> AssignPermissionsToRole([FromBody] PermissionDto request)
+        {
+            var result = await _mediator.Send(new AssignPermissionsToRoleCommand(request));
+            return Ok();
+        }
+        [HasPermission(Permissions.User.AssignRole)]
+        [HttpPost("assign-permission-user")]
+        public async Task<IActionResult> AssignPermissionsToUser([FromBody] AssignUserPermissionsDto request)
+        {
+            var result = await _mediator.Send(new AssignPermissionUserCommand(request));
+            return Ok();
+        }
+        [HasPermission(Permissions.User.AssignRole)]
+        [HttpGet("get-all-permission")] 
+        public async Task<IActionResult> GetAllPermissions()
+        {
+            var response = await _mediator.Send(new GetAllPermissionsQuery());
+            return Ok(response);
         }
     }
 }

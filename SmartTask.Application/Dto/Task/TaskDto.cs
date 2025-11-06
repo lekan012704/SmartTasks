@@ -12,10 +12,13 @@ namespace SmartTask.Application.Dto.Task
         public string Title { get; set; }
         public string Description { get; set; }
         public string AssignedUserId { get; set; }
-        public DateTime DueDate { get; set; }
+        public string AssignedUserName { get; set; }
+        public DateTime? DueDate { get; set; }
         public string Priority { get; set; } // e.g., Low, Medium, High
         public string Status { get; set; }// e.g., Not Started, In Progress, Completed
         public string CreatedBy { get; set; } // User ID of the creator
+        public string UpdatedBy { get; set; } // User ID of the creator
+        public bool IsDeleted { get; set; } // User ID of the creator
         public bool IsActive { get; set; } = true; // Default to active
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // Default to current time

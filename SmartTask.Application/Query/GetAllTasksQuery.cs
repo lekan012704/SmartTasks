@@ -9,6 +9,6 @@ using System.Threading.Tasks;
 
 namespace SmartTask.Application.Query
 {
-    public record GetTaskByIdQuery(Guid CompanyId) : IRequest<Response<List<TaskDto>>>;
+    public record GetTaskByComapanyIdQuery(Guid CompanyId) : IRequest<Response<List<TaskDto>>>;
 
 }

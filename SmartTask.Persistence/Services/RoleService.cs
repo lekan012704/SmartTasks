@@ -1,6 +1,4 @@
-﻿using Azure.Core;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SmartTask.Application.Command;
@@ -9,7 +7,7 @@ using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Interfaces;
 using SmartTask.Application.Wrappers;
-using SmartTask.Identity.Models;
+using SmartTask.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -283,7 +281,82 @@ namespace SmartTask.Identity.Services
 
             }
         }
-       
+        public async Task<Response<List<string>>> AddPermissionUserAsync(AssignUserPermissionsDto request)
+        {
+            // Define the specific claim type used for application permissions.
+            const string PermissionClaimType = "permission";
+
+          
+            if (request == null || string.IsNullOrWhiteSpace(request.UserId) || request.Permissions == null)
+            {
+                return ApplicationConstants.FailureMessage<List<string>>(null, "Invalid request: UserId and Permissions list are required.");
+            }
+
+            try
+            {
+               
+                var user = await _userManager.FindByIdAsync(request.UserId);
+                if (user == null)
+                {
+                    
+                    return ApplicationConstants.NotFoundMessage<List<string>>(null, $"User with ID '{request.UserId}' not found.");
+                }
+
+          
+
+               
+                var currentClaims = await _userManager.GetClaimsAsync(user);
+               
+                var claimsToRemove = currentClaims.Where(c => c.Type == PermissionClaimType).ToList();
+
+              
+                if (claimsToRemove.Any())
+                {
+                    var removeResult = await _userManager.RemoveClaimsAsync(user, claimsToRemove);
+                    if (!removeResult.Succeeded)
+                    {
+                        
+                        _logger.LogError("Failed to remove existing permission claims for user {UserId}: {Errors}",
+                            user.Id, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+              
+                        return ApplicationConstants.FailureMessage<List<string>>(null, "Failed to remove existing permissions before assigning new ones.");
+                    }
+                    _logger.LogInformation("Removed {Count} existing permission claims for user {UserId}.", claimsToRemove.Count, user.Id);
+                }
+
+                var claimsToAdd = request.Permissions
+                                         .Distinct() 
+                                         .Select(permissionName => new Claim(PermissionClaimType, permissionName))
+                                         .ToList();
+
+                if (claimsToAdd.Any())
+                {
+
+                    var addResult = await _userManager.AddClaimsAsync(user, claimsToAdd);
+                    if (!addResult.Succeeded)
+                    {
+                        _logger.LogError("Failed to add new permission claims for user {UserId}: {Errors}",
+                            user.Id, string.Join(", ", addResult.Errors.Select(e => e.Description)));
+                        return ApplicationConstants.FailureMessage<List<string>>(null, "Failed to add one or more new permissions.");
+                    }
+                }
+
+
+                _logger.LogInformation("Successfully updated permissions for user {UserId}. Assigned {Count} permissions.",
+                    user.Id, claimsToAdd.Count);
+                return ApplicationConstants.SuccessMessage(
+                    claimsToAdd.Select(c => c.Value).ToList(), 
+                    $"Permissions updated successfully for user '{user.UserName}'."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while assigning permissions to user {UserId}", request.UserId);
+                return ApplicationConstants.FailureMessage<List<string>>(null, "An internal server error occurred while assigning permissions.");
+            }
+        }
+
+
     }
 }
 

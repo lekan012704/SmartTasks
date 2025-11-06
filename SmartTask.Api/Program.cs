@@ -1,16 +1,17 @@
-﻿
-using Hangfire;
+﻿using Hangfire; // Make sure this is imported
 using Microsoft.AspNetCore.Identity;
+using Microsoft.OpenApi.Models; // Make sure this is imported
 using SmartTask.Application;
 using SmartTask.Application.Interfaces;
-using SmartTask.Identity;
-using SmartTask.Identity.Models;
+using SmartTask.Domain;
 using SmartTask.Identity.Seeds;
 using SmartTask.Identity.Services;
 using SmartTask.Persistence;
 using SmartTask.Persistence.Contexts;
 using SmartTask.Persistence.Services;
 using SmartTask.Shared;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace SmartTask.Api
 {
@@ -20,65 +21,95 @@ namespace SmartTask.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // 1. AddIdentityInfrastructure should handle AddIdentity.
+            // If it doesn't, this is fine, but it's likely redundant.
             builder.Services.AddIdentityInfrastructure(builder.Configuration);
-            builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-             .AddEntityFrameworkStores<ApplicationDbContext>()
-             .AddDefaultTokenProviders();
+             
+            //builder.Services.ConfigureApplicationCookie(options =>
+            //{
+            //    // Disable redirects for API requests
+            //    options.Events.OnRedirectToLogin = context =>
+            //    {
+            //        if (context.Request.Path.StartsWithSegments("/api"))
+            //        {
+            //            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            //            return Task.CompletedTask;
+            //        }
+
+            //        context.Response.Redirect(context.RedirectUri);
+            //        return Task.CompletedTask;
+            //    };
+
+            //    options.Events.OnRedirectToAccessDenied = context =>
+            //    {
+            //        if (context.Request.Path.StartsWithSegments("/api"))
+            //        {
+            //            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            //            return Task.CompletedTask;
+            //        }
+
+            //        context.Response.Redirect(context.RedirectUri);
+            //        return Task.CompletedTask;
+            //    };
+            //});
+
+
             builder.Services.AddScoped<IPermissionService, PermissionService>();
             builder.Services.AddPersistenceInfrastructure(builder.Configuration);
             builder.Services.AddSharedInfrastructure(builder.Configuration);
+            builder.Services.AddApplicationLayer(); // Moved with other custom services
+
             builder.Services.AddControllers();
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    policy.AllowAnyOrigin() // Or set to your frontend domain
+                    policy.AllowAnyOrigin()
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });
             });
 
-            // Add Hangfire and its storage (SQL Server in this case)
+            // Add Hangfire and its storage
             builder.Services.AddHangfire(config =>
                 config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddHangfireServer();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddApplicationLayer();
+            
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new() { Title = "SmartTasks API", Version = "v1" });
 
                 // Add JWT support
-                c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Type = SecuritySchemeType.Http,
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
-                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    In = ParameterLocation.Header,
                     Description = "Enter 'Bearer' [space] and then your valid JWT token."
                 });
 
-                c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
             });
 
-                var app = builder.Build();
+            var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -86,45 +117,85 @@ namespace SmartTask.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            // 2. Uncomment and place HttpsRedirection first
+            app.UseHttpsRedirection();
+            //app.UseStatusCodePages(async context =>
+            //{
+            //    var response = context.HttpContext.Response;
+            //    Console.WriteLine($"Response Code: {response.StatusCode}");
+            //    await response.WriteAsync($"Status Code: {response.StatusCode}");
+            //});
+
+            // 3. UseRouting must come before UseCors and UseAuthentication
+            app.UseRouting();
+
+            // 4. THIS IS THE FIX: Uncommented and moved to the correct position
+            app.UseCors(); 
+
+            // 5. Authentication comes after CORS but before Authorization
+            app.UseAuthentication();
+            app.UseAuthorization();
+            
+            // 6. Secure the Hangfire dashboard
+            app.MapHangfireDashboard()
+               .RequireAuthorization(); // Requires any authenticated user
+
+            app.MapControllers();
+
+            // 7. Data seeding and Hangfire jobs should be in the same scope
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
-
-                // Seed Super Admin and default roles
-                await DefaultSuperAdmin.SeedAsync(services);
-
-                // Get required services for permission seeding
-                var dbContext = services.GetRequiredService<ApplicationDbContext>();
-                var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
                 var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-                var logger = loggerFactory.CreateLogger("RolePermissionSeeder");
-
+                
                 try
                 {
-                    await RolePermissionSeeder.SeedAsync(dbContext, roleManager, logger);
+                    // Seed Super Admin
+                    var adminLogger = loggerFactory.CreateLogger("DefaultSuperAdmin");
+                    await DefaultSuperAdmin.SeedAsync(services);
+                    adminLogger.LogInformation("Super Admin seeding complete.");
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error occurred while seeding role permissions.");
+                    var adminLogger = loggerFactory.CreateLogger("DefaultSuperAdmin");
+                    adminLogger.LogError(ex, "Error occurred while seeding Super Admin.");
+                }
+
+                try
+                {
+                    // Seed Roles and Permissions
+                    var dbContext = services.GetRequiredService<ApplicationDbContext>();
+                    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+                    var roleLogger = loggerFactory.CreateLogger("RolePermissionSeeder");
+                    await RolePermissionSeeder.SeedAsync(dbContext, roleManager, roleLogger);
+                    roleLogger.LogInformation("Role and Permission seeding complete.");
+                }
+                catch (Exception ex)
+                {
+                    var roleLogger = loggerFactory.CreateLogger("RolePermissionSeeder");
+                    roleLogger.LogError(ex, "Error occurred while seeding role permissions.");
+                }
+
+                try
+                {
+                    // 8. Schedule recurring jobs inside the scope
+                    var jobLogger = loggerFactory.CreateLogger("RecurringJobs");
+                    RecurringJob.AddOrUpdate<OverdueTaskDetectorJob>(
+                        "overdue-task-checker",
+                        job => job.ExecuteAsync(),
+                        "*/5 * * * *"); // every 5 minutes
+                    jobLogger.LogInformation("Recurring jobs registered.");
+                }
+                catch (Exception ex)
+                {
+                    var jobLogger = loggerFactory.CreateLogger("RecurringJobs");
+                    jobLogger.LogError(ex, "Error occurred while registering recurring jobs.");
                 }
             }
-
-           
-            app.UseHttpsRedirection();
-            app.UseRouting();
-            app.UseCors();
-            app.UseAuthentication();
-            app.UseAuthorization();
-            app.MapControllers();
-            app.UseHangfireDashboard(); // Optional: /hangfire
-
-            // ✅ Schedule recurring jobs *AFTER* app is built
-            RecurringJob.AddOrUpdate<OverdueTaskDetectorJob>(
-                "overdue-task-checker",
-                job => job.ExecuteAsync(),
-                "*/5 * * * *"); // every 5 minutes
 
             app.Run();
         }
     }
 }
+

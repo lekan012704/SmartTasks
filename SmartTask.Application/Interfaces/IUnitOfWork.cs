@@ -12,6 +12,9 @@ namespace SmartTask.Application.Interfaces
         IGenericRepositoryAsync<TaskItem> Tasks { get; }
         IGenericRepositoryAsync<Company> Companies { get; }
         IGenericRepositoryAsync<AuditLog> Audit { get; }
+        IGenericRepositoryAsync<ProjectMember> ProjectMember { get; }
+        IGenericRepositoryAsync<Project> Project { get; }
+        IGenericRepositoryAsync<Sprint> Sprint { get; }
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();

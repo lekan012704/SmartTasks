@@ -8,12 +8,11 @@ namespace SmartTask.Application.Dto.Task
 {
     public class CreateTaskDto
     {
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string AssignedUserId { get; set; }
+        public required string Title { get; set; }
+        public required string Description { get; set; }
         public DateTime DueDate { get; set; }
-        public string Priority { get; set; } // e.g., Low, Medium, High
-        public string Status { get; set; }// e.g., Not Started, In Progress, Completed
+        public required string Priority { get; set; } // e.g., Low, Medium, High
+        public required string Status { get; set; }// e.g., Not Started, In Progress, Completed
         public bool IsActive { get; set; } = true; // Default to active
 
 

@@ -2,7 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SmartTask.Application.Interfaces;
-using SmartTask.Identity.Models;
+using SmartTask.Domain.Constants;
+using SmartTask.Domain.Models;
 using SmartTask.Persistence.Contexts;
 using System.Security.Claims;
 
@@ -71,5 +72,23 @@ namespace SmartTask.Identity.Services
                 return false;
             }
         }
+        public Task<List<string>> GetPermissionsAsync(string searchTerm)
+        {
+            // Use the dynamically generated list from the Permissions class
+            IEnumerable<string> permissionsQuery = Permissions.All;
+
+            // Apply Filtering
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                permissionsQuery = permissionsQuery.Where(p =>
+                    p.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Apply Sorting and convert to List
+            var sortedPermissions = permissionsQuery.OrderBy(p => p).ToList();
+
+            // Return as a completed Task (since reflection is synchronous here)
+            return Task.FromResult(sortedPermissions);
+        }
     }
-}
+    }

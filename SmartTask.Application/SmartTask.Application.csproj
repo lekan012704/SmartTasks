@@ -20,4 +20,5 @@
     <ProjectReference Include="..\SmartTask.Domain\SmartTask.Domain.csproj" />
   </ItemGroup>
 
+
 </Project>

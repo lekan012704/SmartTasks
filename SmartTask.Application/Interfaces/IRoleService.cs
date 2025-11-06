@@ -29,6 +29,7 @@ namespace SmartTask.Application.Interfaces
             
         Task<Response<List<string>>> GetUsersInRoleAsync(string roleName);
 
+        Task<Response<List<string>>> AddPermissionUserAsync(AssignUserPermissionsDto request);
         Task<Response<string>> AddClaimsToRoleAsync(string roleId, List<string> claims);
     }
 

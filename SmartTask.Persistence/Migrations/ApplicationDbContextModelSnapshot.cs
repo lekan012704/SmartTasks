@@ -155,47 +155,19 @@ namespace SmartTask.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("SmartTask.Application.Dto.Account.RefreshToken", b =>
+            modelBuilder.Entity("SmartTask.Domain.Constants.RolePermission", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
+                    b.Property<string>("RoleId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CreatedByIp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasKey("RoleId", "PermissionId");
 
-                    b.Property<DateTime>("Expires")
-                        .HasColumnType("datetime2");
+                    b.HasIndex("PermissionId");
 
-                    b.Property<string>("ReplacedByToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("Revoked")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RevokedByIp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.ToTable("RefreshToken");
+                    b.ToTable("RolePermission");
                 });
 
             modelBuilder.Entity("SmartTask.Domain.Entities.AuditLog", b =>
@@ -271,6 +243,160 @@ namespace SmartTask.Persistence.Migrations
                     b.ToTable("Company");
                 });
 
+            modelBuilder.Entity("SmartTask.Domain.Entities.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Permission");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Project", b =>
+                {
+                    b.Property<Guid>("ProjectId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsArchived")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("OpenTasks")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ProjectLeadId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TotalTasks")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProjectId");
+
+                    b.HasIndex("ProjectLeadId");
+
+                    b.ToTable("Project", (string)null);
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.ProjectMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DateJoined")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ProjectMember");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Sprint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Sprint");
+                });
+
             modelBuilder.Entity("SmartTask.Domain.Entities.TaskItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -301,7 +427,7 @@ namespace SmartTask.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("DueDate")
+                    b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsCompleted")
@@ -317,13 +443,17 @@ namespace SmartTask.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -337,10 +467,12 @@ namespace SmartTask.Persistence.Migrations
 
                     b.HasIndex("CompanyId");
 
+                    b.HasIndex("ProjectId");
+
                     b.ToTable("TaskItem");
                 });
 
-            modelBuilder.Entity("SmartTask.Identity.Models.ApplicationUser", b =>
+            modelBuilder.Entity("SmartTask.Domain.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -398,6 +530,9 @@ namespace SmartTask.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("EnabledBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("IsActive")
@@ -469,6 +604,49 @@ namespace SmartTask.Persistence.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SmartTask.Domain.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByIp")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Expires")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReplacedByToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Revoked")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RevokedByIp")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -480,7 +658,7 @@ namespace SmartTask.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -489,7 +667,7 @@ namespace SmartTask.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -504,7 +682,7 @@ namespace SmartTask.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -513,23 +691,76 @@ namespace SmartTask.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SmartTask.Application.Dto.Account.RefreshToken", b =>
+            modelBuilder.Entity("SmartTask.Domain.Constants.RolePermission", b =>
                 {
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("ApplicationUserId");
+                    b.HasOne("SmartTask.Domain.Entities.Permission", "Permission")
+                        .WithMany("RolePermission")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_RolePermission_Permissions_PermissionId");
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_RolePermission_Roles_RoleId");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Project", b =>
+                {
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", "ProjectLead")
+                        .WithMany()
+                        .HasForeignKey("ProjectLeadId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ProjectLead");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.ProjectMember", b =>
+                {
+                    b.HasOne("SmartTask.Domain.Entities.Project", "Project")
+                        .WithMany("Members")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Sprint", b =>
+                {
+                    b.HasOne("SmartTask.Domain.Entities.Project", "Project")
+                        .WithMany("Sprints")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("SmartTask.Domain.Entities.TaskItem", b =>
                 {
-                    b.HasOne("SmartTask.Identity.Models.ApplicationUser", null)
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
                         .WithMany("AssignedTasks")
                         .HasForeignKey("AssignedUserId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -540,10 +771,18 @@ namespace SmartTask.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SmartTask.Domain.Entities.Project", "Project")
+                        .WithMany("Tasks")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Company");
+
+                    b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("SmartTask.Identity.Models.ApplicationUser", b =>
+            modelBuilder.Entity("SmartTask.Domain.Models.ApplicationUser", b =>
                 {
                     b.HasOne("SmartTask.Domain.Entities.Company", "Company")
                         .WithMany()
@@ -553,7 +792,28 @@ namespace SmartTask.Persistence.Migrations
                     b.Navigation("Company");
                 });
 
-            modelBuilder.Entity("SmartTask.Identity.Models.ApplicationUser", b =>
+            modelBuilder.Entity("SmartTask.Domain.Models.RefreshToken", b =>
+                {
+                    b.HasOne("SmartTask.Domain.Models.ApplicationUser", null)
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("ApplicationUserId");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermission");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Entities.Project", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Sprints");
+
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("SmartTask.Domain.Models.ApplicationUser", b =>
                 {
                     b.Navigation("AssignedTasks");
 

@@ -14,5 +14,6 @@ namespace SmartTask.Application.Dto.Task
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
         public string? Description { get; set; }
+        public DateTime Timestamp { get; set; }
     }
 }

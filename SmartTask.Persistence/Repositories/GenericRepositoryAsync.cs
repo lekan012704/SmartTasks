@@ -21,6 +21,10 @@ namespace SmartTask.Persistence.Repositories
         {
             return await _context.Set<T>().FindAsync(id);
         }
+        public virtual async Task<T> GetByIdAsync(Guid id)
+        {
+            return await _context.Set<T>().FindAsync(id);
+        }
         public virtual async Task<T> AddAsync(T entity)
         {
             await _context.Set<T>().AddAsync(entity);

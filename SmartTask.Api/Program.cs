@@ -8,7 +8,6 @@ using SmartTask.Identity.Seeds;
 using SmartTask.Identity.Services;
 using SmartTask.Persistence;
 using SmartTask.Persistence.Contexts;
-using SmartTask.Persistence.Services;
 using SmartTask.Shared;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -180,12 +179,12 @@ namespace SmartTask.Api
                 try
                 {
                     // 8. Schedule recurring jobs inside the scope
-                    var jobLogger = loggerFactory.CreateLogger("RecurringJobs");
-                    RecurringJob.AddOrUpdate<OverdueTaskDetectorJob>(
-                        "overdue-task-checker",
-                        job => job.ExecuteAsync(),
-                        "*/5 * * * *"); // every 5 minutes
-                    jobLogger.LogInformation("Recurring jobs registered.");
+                    //var jobLogger = loggerFactory.CreateLogger("RecurringJobs");
+                    //RecurringJob.AddOrUpdate<OverdueTaskDetectorJob>(
+                    //    "overdue-task-checker",
+                    //    job => job.ExecuteAsync(),
+                    //    "*/5 * * * *"); // every 5 minutes
+                    //jobLogger.LogInformation("Recurring jobs registered.");
                 }
                 catch (Exception ex)
                 {

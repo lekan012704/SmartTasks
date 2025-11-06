@@ -8,9 +8,7 @@ using SmartTask.Application.Command.Task;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
-using SmartTask.Application.Dto.Audit;
 using SmartTask.Application.Dto.Role;
-using SmartTask.Application.Dto.Task;
 using SmartTask.Application.Query;
 using SmartTask.Domain.Constants;
 
@@ -67,49 +65,49 @@ namespace SmartTask.Api.Controllers
             var result = await _mediator.Send(new AddPermissionCommand(request));
             return Ok(result);
         }
-        [HasPermission(Permissions.Report.View)]
-        [HttpGet("get-completed-task")]
-        public async Task<IActionResult> GetCompletedTask()
-        {
-            var result = await _mediator.Send(new GetTasksCompletedPerWeekQuery());
-            return Ok(result);
-        }
-        [HasPermission(Permissions.Report.View)]
-        [HttpGet("get-completed-tasks-filtered")]
-        public async Task<IActionResult> GetCompletedTaskFiltered([FromQuery] WeeklyStatsFilter request)
-        {
-            var result = await _mediator.Send(new GetFilteredTasksCompletedPerWeekQuery(request));
-            return Ok(result);
-        }
-        [HasPermission(Permissions.Report.View)]
-        [HttpGet("get-over - due-task-by-status")]
-        public async Task<IActionResult> GetOverDueTaskByStatus()
-        {
-            var result = await _mediator.Send(new GetOverdueTaskQuery());
-            return Ok(result);
-        }
-        [HasPermission(Permissions.Report.View)]
-        [HttpGet("get-over-due-task-by-status-filtered")]
-        public async Task<IActionResult> GetOverDueTaskByStatusFiltered([FromQuery] FilteredOverdueTask request)
-        {
-            var result = await _mediator.Send(new GetFilteredOverdueTaskQuery(request));
-            return Ok(result);
-        }
+        //[HasPermission(Permissions.Report.View)]
+        //[HttpGet("get-completed-task")]
+        //public async Task<IActionResult> GetCompletedTask()
+        //{
+        //    var result = await _mediator.Send(new GetTasksCompletedPerWeekQuery());
+        //    return Ok(result);
+        //}
+        //[HasPermission(Permissions.Report.View)]
+        //[HttpGet("get-completed-tasks-filtered")]
+        //public async Task<IActionResult> GetCompletedTaskFiltered([FromQuery] WeeklyStatsFilter request)
+        //{
+        //    var result = await _mediator.Send(new GetFilteredTasksCompletedPerWeekQuery(request));
+        //    return Ok(result);
+        //}
+        //[HasPermission(Permissions.Report.View)]
+        //[HttpGet("get-over - due-task-by-status")]
+        //public async Task<IActionResult> GetOverDueTaskByStatus()
+        //{
+        //    var result = await _mediator.Send(new GetOverdueTaskQuery());
+        //    return Ok(result);
+        //}
+        //[HasPermission(Permissions.Report.View)]
+        //[HttpGet("get-over-due-task-by-status-filtered")]
+        //public async Task<IActionResult> GetOverDueTaskByStatusFiltered([FromQuery] FilteredOverdueTask request)
+        //{
+        //    var result = await _mediator.Send(new GetFilteredOverdueTaskQuery(request));
+        //    return Ok(result);
+        //}
        
-        [HasPermission(Permissions.Audit.View)]
-        [HttpGet("get-audit-log")]
-        public async Task<IActionResult> GetAuditLog()
-        {
-            var result = await _mediator.Send(new GetAuditQuery());
-            return Ok(result);
-        }
-        [HasPermission(Permissions.Audit.View)]
-        [HttpGet("get-audit-log-filtered")]
-        public async Task<IActionResult> GetAuditLogFiltered([FromQuery] FilteredAuditLog request)
-        {
-            var result = await _mediator.Send(new GetFilteredAuditLog(request));
-            return Ok(result);
-        }
+        //[HasPermission(Permissions.Audit.View)]
+        //[HttpGet("get-audit-log")]
+        //public async Task<IActionResult> GetAuditLog()
+        //{
+        //    var result = await _mediator.Send(new GetAuditQuery());
+        //    return Ok(result);
+        //}
+        //[HasPermission(Permissions.Audit.View)]
+        //[HttpGet("get-audit-log-filtered")]
+        //public async Task<IActionResult> GetAuditLogFiltered([FromQuery] FilteredAuditLog request)
+        //{
+        //    var result = await _mediator.Send(new GetFilteredAuditLog(request));
+        //    return Ok(result);
+        //}
         [HasPermission(Permissions.User.Activate)]
         [HttpPost("activate-user/{id}")] 
         public async Task<IActionResult> ActivateUser(string id)

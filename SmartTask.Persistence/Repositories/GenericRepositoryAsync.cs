@@ -69,10 +69,7 @@ namespace SmartTask.Persistence.Repositories
                 return null;
             }
         }
-       public async Task<bool> TaskExistsAsync(string title, Guid companyId)
-        {
-            return await _context.TaskItem.AnyAsync(t => t.Title == title && t.CompanyId == companyId);
-        }
+    
         public async Task<bool> CompanyExistsAsync(string companyName)
         {
             return await _context.Company.AnyAsync(c => c.Name == companyName);

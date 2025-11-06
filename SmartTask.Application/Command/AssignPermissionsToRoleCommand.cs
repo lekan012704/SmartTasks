@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using SmartTask.Application.Dto.Role;
-using SmartTask.Application.Dto.Task;
 using SmartTask.Application.Wrappers;
 using System;
 using System.Collections.Generic;

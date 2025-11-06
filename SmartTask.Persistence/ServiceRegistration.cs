@@ -7,7 +7,6 @@ using SmartTask.Identity.Services;
 using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
 using SmartTask.Persistence.Contexts;
 using SmartTask.Persistence.Repositories;
-using SmartTask.Persistence.Services;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -26,7 +25,7 @@ namespace SmartTask.Persistence
             services.AddScoped<IEntityManagerAsync, EntityMangerAsync>();
             services.AddScoped<IAuditLogRepository, AuditRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<ITaskService,TaskService>();
+           
             // Register JwtService or token generator class
             services.AddScoped<JwtService>();
             services.AddScoped<IAccountService, AccountService>();

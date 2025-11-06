@@ -14,33 +14,15 @@ namespace SmartTask.Application.Enums
         Educational,
         Other
     }
-    public enum TaskPriority
+    public enum OrderStatus
     {
-        Low =1,
-        Medium =2,
-        High =3,
-        Urgent=4
+        NewOrder,
+        PaymentPending,
+        Paid,
+        ReadyForDispatch,
+        InTransit,
+        Delivered,
+        Cancelled 
     }
-    public enum TaskStatuses
-    {
-        New = 1,
-        InProgress = 2,
-        Completed = 3,
-        Blocked = 4,
-        OnHold = 5
-    }
-    public enum ProjectStatus
-    {
-        Planning = 1,
-        Active = 2,
-        Completed = 3,
-        Archived = 4
-    }
-    public enum ProjectVisibility
-    { 
-       Private = 1,
-       Public = 2   
-    }
-
 
 }

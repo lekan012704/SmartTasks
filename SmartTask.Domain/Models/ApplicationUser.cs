@@ -24,7 +24,7 @@ namespace SmartTask.Domain.Models
         public Company Company { get; set; }    
         public bool? IsActive { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
-        public ICollection<TaskItem> AssignedTasks { get; set; }
+        public ICollection<Order> AssignedTasks { get; set; }
         public string? DisabledBy { get; set; }
         public string? EnabledBy { get; set; }
         public DateTime? DateEnabled { get; set; }

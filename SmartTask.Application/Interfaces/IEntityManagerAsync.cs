@@ -1,8 +1,10 @@
-﻿using SmartTask.Application.Command;
-using SmartTask.Application.Command.Task;
+﻿using MediatR;
+using SmartTask.Application.Command;
+using SmartTask.Application.Command.Order;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Dto.Role;
+using SmartTask.Application.Features.Orders.Commands;
 using SmartTask.Application.Query;
 using SmartTask.Application.Wrappers;
 using System;
@@ -26,7 +28,8 @@ namespace SmartTask.Application.Interfaces
         Task<Response<string>> DeleteUserAsync(string userId);
         Task<Response<string>> DeactivateUserAsync(string userId);
         Task<Response<string>> ActivateUserAsync(string userId);
-    
+        Task<Guid> CreateOrderAsync(CreateOrderCommand request);
+        Task<Unit> FulfillBatchManuallyAsync(FulfillBatchManuallyCommand request);
 
     }
 }

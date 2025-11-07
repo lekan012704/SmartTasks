@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SmartTask.Application.Command;
-using SmartTask.Application.Command.Task;
+using SmartTask.Application.Command.Order;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
@@ -618,7 +618,7 @@ namespace SmartTask.Persistence.Repositories
                     Subtotal = subtotal,
                     DeliveryFee = request.DeliveryFee,
                     TotalDue = totalDue,
-                    ApplicationUserId = companyId.ToString(),
+                    ApplicationUserId = _authenticatedUserService.UserId
                 };
 
                 _context.Order.Add(order);
@@ -627,10 +627,46 @@ namespace SmartTask.Persistence.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("");
+                throw new Exception($"Error creating order: {ex.Message}");
             }
         }
+       
+        public async Task<Unit> FulfillBatchManuallyAsync(FulfillBatchManuallyCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var requestedIdCount = request.OrderIds.Distinct().Count();
 
+              
+                var ordersToUpdate = await _context.Order
+                    .Where(o => o.ApplicationUserId == _authenticatedUserService.UserId && request.OrderIds.Contains(o.Id))
+                    .ToListAsync();
+
+                if (ordersToUpdate.Count != requestedIdCount)
+                {
+                    throw new Exception("One or more Order IDs were invalid or do not belong to you.");
+                }
+                var now = DateTime.UtcNow;
+                foreach (var order in ordersToUpdate)
+                {
+                    order.Status = OrderStatus.InTransit;
+                    order.ManualRiderName = request.ManualRiderName;
+                    order.ManualTrackingInfo = request.ManualTrackingInfo;
+                    order.UpdatedAt = now;
+                }
+                await _unitOfWork.SaveChangesAsync();
+
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error fulfilling batch: {ex.Message}");
+            }
+        }
     }
 
     }

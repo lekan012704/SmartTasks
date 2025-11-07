@@ -1,8 +1,6 @@
 ﻿using MediatR;
-using Newtonsoft.Json; // For serializing the OrderItems
 using SmartTask.Application.Interfaces; 
 using SmartTask.Domain.Entities;
-using SmartTask.Domain.Enums;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +18,7 @@ namespace SmartTask.Application.Features.Orders.Commands
 
         public async Task<Guid> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
-            return await _entityManager.CreateOrderAsync(request, cancellationToken);
+            return await _entityManager.CreateOrderAsync(request);
         }
     }
 }

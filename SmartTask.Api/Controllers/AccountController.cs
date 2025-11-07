@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartTask.Api.Filter;
 using SmartTask.Application.Command;
-using SmartTask.Application.Command.Task;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;

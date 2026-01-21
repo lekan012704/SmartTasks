@@ -7,6 +7,7 @@ using SmartTask.Identity.Services;
 using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
 using SmartTask.Persistence.Contexts;
 using SmartTask.Persistence.Repositories;
+using SmartTask.Persistence.Services;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -29,7 +30,11 @@ namespace SmartTask.Persistence
             // Register JwtService or token generator class
             services.AddScoped<JwtService>();
             services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IShipBubbleService, ShipBubbleService>();
+            services.AddScoped<IPaystackService, PaystackService>();
+            services.AddScoped<IMailService, MailService>();
             services.AddScoped<IRoleService, RoleService>();
+            services.AddTransient<INotificationService, NotificationService>();
             services.AddTransient<IDbConnection>(sp =>
     new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
             services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));    

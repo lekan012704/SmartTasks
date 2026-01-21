@@ -1,8 +1,11 @@
 ﻿using Azure.Core;
 using Dapper;
+using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,22 +15,30 @@ using SmartTask.Application.Command.Order;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
+using SmartTask.Application.Dto.Logistics;
+using SmartTask.Application.Dto.Order;
+using SmartTask.Application.Dto.Paystack;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Enums;
 using SmartTask.Application.Features.Orders.Commands;
+using SmartTask.Application.Features.Orders.Queries;
 using SmartTask.Application.Interfaces;
 using SmartTask.Application.Query;
+using SmartTask.Application.Query.Logistics;
 using SmartTask.Application.Wrappers;
 using SmartTask.Domain.Constants;
 using SmartTask.Domain.Entities;
 using SmartTask.Domain.Models;
 using SmartTask.Persistence.Contexts;
+using SmartTask.Shared.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Data;
 using System.Data;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +58,12 @@ namespace SmartTask.Persistence.Repositories
         private readonly IDbConnection db;
         private readonly IAuditLogRepository _auditLogRepo;
         private readonly IUnitOfWork _unitOfWork;
-        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork)
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IShipBubbleService _shipBubbleService;
+        private readonly IBackgroundJobClient _jobClient;
+        private readonly IMailService _mailService;
+        private readonly IPaystackService _paystackService;
+        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IShipBubbleService shipBubbleService, IBackgroundJobClient jobClient, IMailService mailService, IPaystackService paystackService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -58,6 +74,11 @@ namespace SmartTask.Persistence.Repositories
             db = dbConnection;
             _auditLogRepo = auditLogRepo;
             _unitOfWork = unitOfWork;
+            _httpClientFactory = httpClientFactory;
+            _shipBubbleService = shipBubbleService;
+            _jobClient = jobClient;
+            _mailService = mailService;
+            _paystackService = paystackService;
         }
 
 
@@ -259,7 +280,7 @@ namespace SmartTask.Persistence.Repositories
             }
         }
 
-      
+
         public async Task<Response<List<CompanyTypeDto>>> GetAllCompanyTypeAsync()
         {
             try
@@ -367,7 +388,7 @@ namespace SmartTask.Persistence.Repositories
 
             return ApplicationConstants.SuccessMessage(result, "Users retrieved successfully.");
         }
-       
+
         public async Task<Response<List<string>>> AddPermissionsToRoleAsync(PermissionDto request)
         {
             try
@@ -601,7 +622,7 @@ namespace SmartTask.Persistence.Repositories
                     throw new Exception("User is not authenticated.");
                 }
                 decimal subtotal = request.OrderItems.Sum(item => item.Price * item.Quantity);
-                decimal totalDue = subtotal + request.DeliveryFee;
+                decimal totalDue = subtotal;
 
                 var orderItemsJson = JsonConvert.SerializeObject(request.OrderItems);
 
@@ -616,9 +637,9 @@ namespace SmartTask.Persistence.Repositories
                     DeliveryAddress = request.DeliveryAddress,
                     OrderItemsJson = orderItemsJson,
                     Subtotal = subtotal,
-                    DeliveryFee = request.DeliveryFee,
                     TotalDue = totalDue,
-                    ApplicationUserId = _authenticatedUserService.UserId
+                    ApplicationUserId = _authenticatedUserService.UserId,
+                    CustomerEmail = request.CustomerEmail
                 };
 
                 _context.Order.Add(order);
@@ -630,7 +651,7 @@ namespace SmartTask.Persistence.Repositories
                 throw new Exception($"Error creating order: {ex.Message}");
             }
         }
-       
+
         public async Task<Unit> FulfillBatchManuallyAsync(FulfillBatchManuallyCommand request)
         {
             try
@@ -641,7 +662,7 @@ namespace SmartTask.Persistence.Repositories
                 }
                 var requestedIdCount = request.OrderIds.Distinct().Count();
 
-              
+
                 var ordersToUpdate = await _context.Order
                     .Where(o => o.ApplicationUserId == _authenticatedUserService.UserId && request.OrderIds.Contains(o.Id))
                     .ToListAsync();
@@ -667,9 +688,592 @@ namespace SmartTask.Persistence.Repositories
                 throw new Exception($"Error fulfilling batch: {ex.Message}");
             }
         }
-    }
+        public async Task<List<OrderSummaryDto>> GetAllOrderAsync(GetAllOrdersQuery request)
+        {
+
+            if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+            {
+                throw new Exception("User is not authenticated or CompanyId is missing.");
+            }
+
+
+            IQueryable<Order> query = _context.Order
+                .AsNoTracking()
+                .Where(p => p.ApplicationUserId == _authenticatedUserService.UserId);
+
+
+            if (request.StatusIds != null && request.StatusIds.Any())
+            {
+
+                query = query.Where(o => request.StatusIds.Contains((int)o.Status));
+            }
+
+
+            if (!string.IsNullOrEmpty(request.Search))
+            {
+                string searchLower = request.Search.ToLower();
+                query = query.Where(o =>
+                    o.CustomerName!.ToLower().Contains(searchLower) ||
+                    o.Id.ToString().Contains(searchLower));
+            }
+
+
+            if (request.MinAmount.HasValue)
+            {
+                query = query.Where(o => o.TotalDue >= request.MinAmount.Value);
+            }
+            if (request.MaxAmount.HasValue)
+            {
+                query = query.Where(o => o.TotalDue <= request.MaxAmount.Value);
+            }
+
+            if (request.StartDate.HasValue)
+            {
+                query = query.Where(o => o.CreatedAt >= request.StartDate.Value);
+            }
+            if (request.EndDate.HasValue)
+            {
+
+                query = query.Where(o => o.CreatedAt <= request.EndDate.Value.AddDays(1));
+            }
+
+
+            var filteredOrders = await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Select(p => new OrderSummaryDto
+                {
+                    Id = p.Id,
+                    Status = p.Status,
+                    CreatedAt = p.CreatedAt,
+                    CustomerName = p.CustomerName,
+                    TotalDue = p.TotalDue
+                }).ToListAsync();
+
+            return filteredOrders;
+        }
+        public async Task<OrderDto> GetOrderByIdAsync(GetOrderByIdQuery request)
+        {
+            if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+            {
+                throw new Exception("User is not authenticated.");
+            }
+            var order = await _context.Order.AsNoTracking().FirstOrDefaultAsync(p => p.Id == request.OrderId);
+            if (order == null)
+            {
+                throw new Exception("Order not found.");
+            }
+            if (order.ApplicationUserId != _authenticatedUserService.UserId)
+            {
+                throw new Exception("You are not authorized to view this order.");
+            }
+            var response = new OrderDto
+            {
+                Id = order.Id,
+                Status = order.Status,
+                CreatedAt = order.CreatedAt,
+                CustomerName = order.CustomerName,
+                WhatsAppNumber = order.WhatsAppNumber,
+                DeliveryAddress = order.DeliveryAddress,
+                Subtotal = order.Subtotal,
+                TotalDue = order.TotalDue,
+                TrackingNumber = order.TrackingNumber,
+                LogisticsPartner = order.LogisticsPartner,
+                ManualRiderName = order.ManualRiderName,
+                ManualTrackingInfo = order.ManualTrackingInfo,
+                OrderItems = JsonConvert.DeserializeObject<List<OrderItemDto>>(order.OrderItemsJson)
+            };
+            return response;
+        }
+        public async Task<Unit> UpdateStatusAsync(UpdateOrderStatusCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+
+                var order = await _context.Order
+                    .FirstOrDefaultAsync(o => o.Id == request.OrderId);
+
+                if (order == null)
+                {
+                    throw new Exception("Order not found.");
+                }
+
+                if (order.ApplicationUserId != _authenticatedUserService.UserId)
+                {
+                    throw new Exception("You are not authorized to modify this order.");
+                }
+                order.Status = request.NewStatus;
+                order.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync();
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Updating Status: {ex.Message}");
+            }
+        }
+        public async Task<DashboardStatsDto> GetDasboardAsync()
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var now = DateTime.UtcNow;
+                var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+
+                var userOrders = _context.Order
+                    .AsNoTracking()
+                    .Where(o => o.ApplicationUserId == _authenticatedUserService.UserId);
+
+                var totalSalesMonth = await userOrders
+                    .Where(o => o.Status == OrderStatus.Delivered && o.CreatedAt >= startOfMonth)
+                    .SumAsync(o => o.TotalDue);
+
+                var ordersToFulfill = await userOrders
+                    .CountAsync(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.ReadyForDispatch);
+
+                var pendingPayment = await userOrders
+                    .CountAsync(o => o.Status == OrderStatus.PaymentPending);
+
+                var totalOrdersMonth = await userOrders
+                    .CountAsync(o => o.CreatedAt >= startOfMonth);
+
+                var stats = new DashboardStatsDto
+                {
+                    TotalSalesMonth = totalSalesMonth,
+                    OrdersToFulfill = ordersToFulfill,
+                    PendingPayment = pendingPayment,
+                    TotalOrdersMonth = totalOrdersMonth
+                };
+                return stats;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Updating Status: {ex.Message}");
+            }
+        }
+        public async Task<Unit> DeleteOrderAsync(DeleteOrderCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var order = await _context.Order
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(o => o.Id == request.OrderId);
+
+                if (order == null || order.IsDeleted)
+                {
+                    throw new Exception("Order not found.");
+                }
+
+                if (order.ApplicationUserId != _authenticatedUserService.UserId)
+                {
+                    throw new Exception("You are not authorized to delete this order.");
+                }
+
+                order.IsDeleted = true;
+                order.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync();
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Updating Status: {ex.Message}");
+            }
+        }
+        public async Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
+
+                var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
+                if (order == null) throw new Exception("Order not found.");
+                if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
+                    throw new Exception("Order is not in a state to be dispatched.");
+
+                // Get default sender address (your existing code)
+                var senderAddress = await _context.Company
+                    .Where(a => a.Id == companyId)
+                    .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
+                    .FirstOrDefaultAsync();
+
+                var receiverAddress = new AddressDto
+                {
+                    name = order.CustomerName,
+                    phone = order.WhatsAppNumber,
+                    email = order.CustomerEmail,
+                    address = order.DeliveryAddress
+                };
+
+                // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
+                var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
+
+                // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
+                var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
+
+                // Map to the shipping DTO (fill defaults like weight/dimensions/category)
+                var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
+                {
+                    ProductName = i.Description,      // fallback
+                    Description = i.Description,
+                    Price = i.Price,
+                    Quantity = i.Quantity,
+                    Weight = 1,                       // set sensible defaults or compute if you can
+                    PackageLength = 12,
+                    PackageWidth = 10,
+                    PackageHeight = 10,
+                    CategoryId = 1                     // or logic to derive category
+                }).ToList();
+
+                if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
+
+                // totals (optional)
+                var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
+                var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
+
+                // Build FetchRatesDto and attach Items — everything shipping needs is here
+                var fetchRates = new FetchRatesDto
+                {
+                    Sender = senderAddress,
+                    Receiver = receiverAddress,
+                    Weight = (decimal)totalWeight,
+                    Amount = totalAmount,
+                    ServiceType = "delivery",
+                    Items = orderItemsForShipping
+                };
+
+                // optional: set package dimension on DTO if you want
+                fetchRates.PackageDimension = new PackageDimension
+                {
+                    length = orderItemsForShipping.Max(i => i.PackageLength),
+                    width = orderItemsForShipping.Max(i => i.PackageWidth),
+                    height = orderItemsForShipping.Max(i => i.PackageHeight)
+                };
+
+                // Call the shipping service which will call FetchRatesAsync(fetchRates) internally
+                var shipmentResult = await _shipBubbleService.CreateShipmentAutomaticallyAsync(fetchRates);
+
+                // Update order with tracking info (your existing code)
+                order.Status = OrderStatus.InTransit;
+                order.TrackingNumber = shipmentResult.TrackingNumber;
+                order.LogisticsPartner = shipmentResult.CourierName;
+                order.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new BookDispatchResponseDto
+                {
+                    OrderId = order.Id,
+                    TrackingNumber = order.TrackingNumber,
+                    LogisticsPartner = order.LogisticsPartner,
+                    NewStatus = order.Status
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Dispatching Order: {ex.Message}");
+            }
+        }
+        public async Task<string> GetCompanyNameAsync()
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var company = await _context.Company
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == companyId);
+                if (company == null)
+                {
+                    throw new Exception("Company not found.");
+                }
+                return company.Name;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving company name: {ex.Message}");
+            }
+        }
+
+        public async Task<ProfileDetailsDto> GetProfileAsync()
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var company = await _context.Company
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == companyId);
+                if (company == null)
+                {
+                    throw new Exception("Company not found.");
+                }
+                var profile = new ProfileDetailsDto
+                {
+                    StoreName = company.Name,
+                    ContactEmail = company.Email,
+                    PhoneNumber = company.PhoneNumber,
+                    PrimaryAddress = company.Address
+                };
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving profile details: {ex.Message}");
+            }
+
+        }
+        public async Task<Unit> UpdateProfileAsync(UpdateProfileCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var company = await _context.Company
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == companyId);
+                if (company == null)
+                {
+                    throw new Exception("Company not found.");
+                }
+                company.Email = request.ContactEmail;
+                company.PhoneNumber = request.PhoneNumber;
+                company.Address = request.PrimaryAddress;
+                company.UpdatedAt = DateTime.UtcNow;
+                _context.Company.Update(company);
+                await _unitOfWork.SaveChangesAsync();
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error updating profile details: {ex.Message}");
+            }
+        }
+
+        public async Task<Response<string>> ForgotPasswordAsync(ForgotPasswordCommand request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+
+            if (user == null)
+            {
+                return Response<string>.Success("If an account exists for this email, a password reset link has been sent.");
+            }
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var tokenEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var jobId = _jobClient.Enqueue(() => SendPasswordResetEmail(
+               user.Email,
+              tokenEncoded,
+              request.BaseUrl)
+      );
+
+
+            if (!string.IsNullOrEmpty(jobId))
+            {
+
+                _logger.LogInformation("Enqueued password reset email job {JobId} for user {Email}", jobId, user.Email);
+            }
+            return Response<string>.Success("If an account exists for this email, a password reset link has been sent.");
+        }
+        public async Task<Response<string>> SendPasswordResetEmail(string email, string tokenEncoded, string baseUrl)
+        {
+            if (_mailService == null)
+            {
+
+                throw new Exception("Mail service failed to inject into Hangfire job.");
+            }
+            var emailEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(email));
+            var resetLink = $"{baseUrl}/reset-password?token={tokenEncoded}&email={emailEncoded}";
+            var emailBody = $"<p>You requested a password reset. Please use the following link to reset your password:</p><p><a href='{resetLink}'>Reset Password</a></p>";
+            await _mailService.SendAsync(email, "SmartSeller Password Reset", emailBody);
+            return Response<string>.Success("Password reset email sent successfully.");
+        }
+        public async Task<Response<string>> ResetPasswordAsync(ResetPasswordCommand request)
+        {
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(request.Email);
+
+                if (user == null)
+                {
+                    return Response<string>.Failure("Invalid token or email.");
+                }
+
+                // 2. Decode the token (The token received from the frontend is URL-encoded)
+                var tokenDecoded = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+
+                // 3. Reset the password
+                var result = await _userManager.ResetPasswordAsync(user, tokenDecoded, request.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    return Response<string>.Success("Password has been successfully reset.");
+                }
+
+                // Return detailed errors if Identity failed
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return Response<string>.Failure($"Password reset failed: {errors}");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while resetting password: {ex.Message}");
+            }
+
+        }
+        public async Task<Response<List<BankDto>>> GetNigerianBanksAsync()
+        {
+            try
+            {
+                var banks = await _paystackService.GetNigerianBanksAsync();
+                return Response<List<BankDto>>.Success(banks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching Nigerian banks from Paystack.");
+                return Response<List<BankDto>>.Failure("Failed to retrieve Nigerian banks.");
+            }
+        }
+        public async Task<Response<AccountVerificationResponseDto>> AccountVerification(VerifyBankAccountCommand request)
+        {
+            try
+            {
+
+                var (isSuccess, accountName, message) = await _paystackService.ResolveAccountAsync(request.AccountNumber, request.BankCode);
+                if (!isSuccess)
+                {
+                    return Response<AccountVerificationResponseDto>.Failure(message);
+                }
+
+                var verificationDto = new AccountVerificationResponseDto
+                {
+                    Success = isSuccess,
+                    AccountName = accountName,
+                    Message = message
+                };
+                return Response<AccountVerificationResponseDto>.Success(verificationDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while verifying bank account {AccountNumber} with bank code {BankCode}.", request.AccountNumber, request.BankCode);
+                return Response<AccountVerificationResponseDto>.Failure("Bank account verification failed due to internal error.");
+            }
+        }
+
+        public async Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
+
+                var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
+                if (order == null) throw new Exception("Order not found.");
+                if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
+                    throw new Exception("Order is not in a state to be dispatched.");
+
+                // Get default sender address (your existing code)
+                var senderAddress = await _context.Company
+                    .Where(a => a.Id == companyId)
+                    .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
+                    .FirstOrDefaultAsync();
+
+                var receiverAddress = new AddressDto
+                {
+                    name = order.CustomerName,
+                    phone = order.WhatsAppNumber,
+                    email = order.CustomerEmail,
+                    address = order.DeliveryAddress
+                };
+
+                // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
+                var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
+
+                // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
+                var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
+
+                // Map to the shipping DTO (fill defaults like weight/dimensions/category)
+                var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
+                {
+                    ProductName = i.Description,      // fallback
+                    Description = i.Description,
+                    Price = i.Price,
+                    Quantity = i.Quantity,
+                    Weight = 1,                       // set sensible defaults or compute if you can
+                    PackageLength = 12,
+                    PackageWidth = 10,
+                    PackageHeight = 10,
+                    CategoryId = 1                     // or logic to derive category
+                }).ToList();
+
+                if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
+
+                // totals (optional)
+                var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
+                var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
+
+                // Build FetchRatesDto and attach Items — everything shipping needs is here
+                var fetchRates = new FetchRatesDto
+                {
+                    Sender = senderAddress,
+                    Receiver = receiverAddress,
+                    Weight = (decimal)totalWeight,
+                    Amount = totalAmount,
+                    ServiceType = "delivery",
+                    Items = orderItemsForShipping
+                };
+
+                // optional: set package dimension on DTO if you want
+                fetchRates.PackageDimension = new PackageDimension
+                {
+                    length = orderItemsForShipping.Max(i => i.PackageLength),
+                    width = orderItemsForShipping.Max(i => i.PackageWidth),
+                    height = orderItemsForShipping.Max(i => i.PackageHeight)
+                };
+                dynamic rawResult = await _shipBubbleService.FetchRatesAsync(fetchRates);
+
+                var apiResponse = ((Newtonsoft.Json.Linq.JObject)rawResult).ToObject<ShipbubbleApiResponse>();
+
+                if (apiResponse?.Data?.Couriers == null)
+                {
+                    return new Response<List<ShipbubbleRateOption>>("No shipping options available.");
+                }
+
+                // 4. Map the API Data to YOUR App's DTO
+                var mappedRates = apiResponse.Data.Couriers.Select(c => new ShipbubbleRateOption
+                {
+                    RateId = c.ServiceCode,       
+                    CourierName = c.CourierName,     
+                    ServiceName = c.ServiceType,   
+                    Price = c.Total,                 
+                    Currency = c.Currency,   
+                    EstimatedDeliveryTime = c.DeliveryEta,
+                    CourierLogoUrl = c.CourierImage    
+                }).ToList();
+
+                return new Response<List<ShipbubbleRateOption>>(mappedRates);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Getting Order: {ex.Message}");
+            }
+        }
 
     }
+}
 
 
 

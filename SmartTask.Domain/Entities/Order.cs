@@ -15,10 +15,11 @@ namespace SmartTask.Domain.Entities
         // 2. Customer Info
         public string CustomerName { get; set; }
         public string WhatsAppNumber { get; set; }
+        public string CustomerEmail { get; set; }
         public string DeliveryAddress { get; set; }
         public string OrderItemsJson { get; set; }
         public decimal Subtotal { get; set; }
-        public decimal DeliveryFee { get; set; }
+        public decimal? DeliveryFee { get; set; }
         public decimal TotalDue { get; set; }
 
         // --- Option A: "Book Dispatch" (API) ---

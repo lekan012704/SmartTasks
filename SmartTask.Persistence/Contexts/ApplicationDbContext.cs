@@ -23,7 +23,7 @@ namespace SmartTask.Persistence.Contexts
         {
         }
 
-        // Existing constructor with IDateTimeService
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeService dateTime)
             : base(options)
         {
@@ -31,18 +31,20 @@ namespace SmartTask.Persistence.Contexts
         }
 
         public virtual DbSet<Company> Company { get; set; }
-        // This is your DbSet for Orders. You had "Order" which is fine.
+        public virtual DbSet<AddressBook> AddressBook { get; set; }
         public virtual DbSet<Order> Order { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
-        public DbSet<Permission> Permission { get; set; }
+        public DbSet<Permission> Permission { get; set; }   
         public DbSet<RolePermission> RolePermission { get; set; }
+        public DbSet<Notification> Notification { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
            
             base.OnModelCreating(builder);
+            builder.Entity<Notification>().HasNoKey();
 
-            
+
 
             builder.Entity<ApplicationUser>(entity =>
             {

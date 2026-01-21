@@ -9,6 +9,7 @@ namespace SmartTask.Application.Features.Orders.Commands
     {
         // 1. Customer Info
         public string CustomerName { get; set; }
+        public string CustomerEmail { get; set; }
         public string? WhatsAppNumber { get; set; }
         public string? DeliveryAddress { get; set; }
         public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();

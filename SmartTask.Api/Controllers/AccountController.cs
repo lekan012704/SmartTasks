@@ -9,6 +9,7 @@ using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Query;
+using SmartTask.Application.Query.Paystack;
 using SmartTask.Domain.Constants;
 
 namespace SmartTask.Api.Controllers
@@ -64,6 +65,43 @@ namespace SmartTask.Api.Controllers
             var result = await _mediator.Send(new AddPermissionCommand(request));
             return Ok(result);
         }
+        [HttpGet("get-name")]
+        public async Task<IActionResult> GetCompanyName()
+        {
+            var result = await _mediator.Send(new GetCompanyNameQuery());
+            return Ok(result);
+        }
+        [HttpGet("get-profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var query = new GetProfileDetailsQuery();
+            var profile = await _mediator.Send(query);
+            return Ok(profile);
+        }
+        [HttpPatch("update-profile")] 
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command)
+        {  
+            await _mediator.Send(command);
+            return NoContent();
+        }
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand request)
+        {
+            var result = await _mediator.Send(request);
+            return Ok(result);
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            if (result.Succeeded)
+            {
+                return Ok(result);
+            }
+            return BadRequest(result);
+        }
+
         //[HasPermission(Permissions.Report.View)]
         //[HttpGet("get-completed-task")]
         //public async Task<IActionResult> GetCompletedTask()
@@ -92,7 +130,7 @@ namespace SmartTask.Api.Controllers
         //    var result = await _mediator.Send(new GetFilteredOverdueTaskQuery(request));
         //    return Ok(result);
         //}
-       
+
         //[HasPermission(Permissions.Audit.View)]
         //[HttpGet("get-audit-log")]
         //public async Task<IActionResult> GetAuditLog()

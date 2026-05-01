@@ -11,10 +11,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SmartTask.Application.Command;
+using SmartTask.Application.Command.Customer;
 using SmartTask.Application.Command.Order;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto;
 using SmartTask.Application.Dto.Account;
+using SmartTask.Application.Dto.Customer;
 using SmartTask.Application.Dto.Logistics;
 using SmartTask.Application.Dto.Order;
 using SmartTask.Application.Dto.Paystack;
@@ -24,6 +26,7 @@ using SmartTask.Application.Features.Orders.Commands;
 using SmartTask.Application.Features.Orders.Queries;
 using SmartTask.Application.Interfaces;
 using SmartTask.Application.Query;
+using SmartTask.Application.Query.Customer;
 using SmartTask.Application.Query.Logistics;
 using SmartTask.Application.Wrappers;
 using SmartTask.Domain.Constants;
@@ -615,15 +618,37 @@ namespace SmartTask.Persistence.Repositories
         {
             try
             {
-
-
                 if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
-                {
                     throw new Exception("User is not authenticated.");
-                }
-                decimal subtotal = request.OrderItems.Sum(item => item.Price * item.Quantity);
-                decimal totalDue = subtotal;
 
+                // upsert customer by email within this company
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Email == request.CustomerEmail
+                                           && c.CompanyId == companyId);
+
+                if (customer == null)
+                {
+                    customer = new Customer
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = request.CustomerName,
+                        Email = request.CustomerEmail,
+                        PhoneNumber = request.CustomerPhone,
+                        WhatsAppNumber = request.WhatsAppNumber,
+                        CompanyId = companyId,
+                        CreatedAt = DateTime.UtcNow,
+                    };
+                    _context.Customers.Add(customer);
+                }
+                else
+                {
+                    // update in case details changed
+                    customer.Name = request.CustomerName;
+                    customer.PhoneNumber = request.CustomerPhone;
+                    customer.WhatsAppNumber = request.WhatsAppNumber;
+                }
+
+                decimal subtotal = request.OrderItems.Sum(item => item.Price * item.Quantity);
                 var orderItemsJson = JsonConvert.SerializeObject(request.OrderItems);
 
                 var order = new Order
@@ -633,15 +658,20 @@ namespace SmartTask.Persistence.Repositories
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     CustomerName = request.CustomerName,
+                    CustomerEmail = request.CustomerEmail,
+                    CustomerPhone = request.CustomerPhone,   // new
                     WhatsAppNumber = request.WhatsAppNumber,
                     DeliveryAddress = request.DeliveryAddress,
                     OrderItemsJson = orderItemsJson,
                     Subtotal = subtotal,
-                    TotalDue = totalDue,
+                    DeliveryFee = request.DeliveryFee,
+                    DriverName = request.DriverName,         // new
+                    DriverPhone = request.DriverPhone,       // new
                     ApplicationUserId = _authenticatedUserService.UserId,
-                    CustomerEmail = request.CustomerEmail
+                    CustomerId = customer.Id,                // new
                 };
 
+                order.RecalculateTotal();
                 _context.Order.Add(order);
                 await _unitOfWork.SaveChangesAsync();
                 return order.Id;
@@ -784,6 +814,36 @@ namespace SmartTask.Persistence.Repositories
             };
             return response;
         }
+        public async Task<CustomerDto> GetCustomerByIdAsync(GetCustomerByIdQuery request)
+        {
+            if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                throw new Exception("User is not authenticated.");
+
+            var customer = await _context.Customers
+                .AsNoTracking()
+                .Include(c => c.Orders.Where(o => !o.IsDeleted))
+                .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.CompanyId == companyId);
+
+            if (customer == null)
+                throw new Exception("Customer not found.");
+
+            return new CustomerDto
+            {
+                Id = customer.Id,
+                Name = customer.Name,
+                Email = customer.Email,
+                PhoneNumber = customer.PhoneNumber,
+                WhatsAppNumber = customer.WhatsAppNumber,
+                Address = customer.Address,
+                CreatedAt = customer.CreatedAt,
+                TotalOrders = customer.Orders.Count,
+                TotalSpent = customer.Orders.Sum(o => o.TotalDue),
+                LastOrderDate = customer.Orders.Any()
+                                ? customer.Orders.Max(o => o.CreatedAt)
+                                : null,
+            };
+        }
+
         public async Task<Unit> UpdateStatusAsync(UpdateOrderStatusCommand request)
         {
             try
@@ -815,6 +875,73 @@ namespace SmartTask.Persistence.Repositories
                 throw new Exception($"Error Updating Status: {ex.Message}");
             }
         }
+        public async Task<Unit> UpdateCustomerAsync(UpdateCustomerCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Id == request.Id && c.CompanyId == companyId);
+
+                if (customer == null)
+                {
+                    throw new Exception("Customer not found.");
+                }
+                customer.Name = request.Update.Name;
+                customer.Email = request.Update.Email;
+                customer.PhoneNumber = request.Update.PhoneNumber;
+                customer.WhatsAppNumber = request.Update.WhatsAppNumber;
+                customer.Address = request.Update.Address;
+                customer.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync();
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error Updating Customer: {ex.Message}");
+            }
+        }
+        public async Task<List<CustomerDto>> GetAllCustomersAsync()
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+                var customers = await _context.Customers
+                    .AsNoTracking()
+                    .Where(c => c.CompanyId == companyId)
+                    .Select(c => new CustomerDto
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Email = c.Email,
+                        PhoneNumber = c.PhoneNumber,
+                        WhatsAppNumber = c.WhatsAppNumber,
+                        Address = c.Address,
+                        TotalOrders = c.Orders.Count(o => !o.IsDeleted),
+                        TotalSpent = c.Orders
+        .Where(o => !o.IsDeleted)
+        .Sum(o => (decimal?)o.TotalDue) ?? 0,
+                        LastOrderDate = c.Orders
+        .Where(o => !o.IsDeleted)
+        .Max(o => (DateTime?)o.CreatedAt),
+                        CreatedAt = c.CreatedAt,
+                    })
+                    .ToListAsync();
+                return customers;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving customers: {ex.Message}");
+            }
+        }
+
         public async Task<DashboardStatsDto> GetDasboardAsync()
         {
             try
@@ -823,9 +950,11 @@ namespace SmartTask.Persistence.Repositories
                 {
                     throw new Exception("User is not authenticated.");
                 }
+
                 var now = DateTime.UtcNow;
                 var startOfMonth = new DateTime(now.Year, now.Month, 1);
-
+                var startOfLastMonth = startOfMonth.AddMonths(-1);
+                var startOfYear = new DateTime(now.Year, 1, 1);
 
                 var userOrders = _context.Order
                     .AsNoTracking()
@@ -833,6 +962,20 @@ namespace SmartTask.Persistence.Repositories
 
                 var totalSalesMonth = await userOrders
                     .Where(o => o.Status == OrderStatus.Delivered && o.CreatedAt >= startOfMonth)
+                    .SumAsync(o => o.TotalDue);
+
+                var lastMonthSales = await userOrders
+                    .Where(o => o.Status == OrderStatus.Delivered
+                             && o.CreatedAt >= startOfLastMonth
+                             && o.CreatedAt < startOfMonth)
+                    .SumAsync(o => o.TotalDue);
+
+                decimal revenueGrowthPercentage = lastMonthSales == 0
+                    ? 0
+                    : ((totalSalesMonth - lastMonthSales) / lastMonthSales) * 100;
+
+                var totalSalesYear = await userOrders
+                    .Where(o => o.Status == OrderStatus.Delivered && o.CreatedAt >= startOfYear)
                     .SumAsync(o => o.TotalDue);
 
                 var ordersToFulfill = await userOrders
@@ -847,17 +990,21 @@ namespace SmartTask.Persistence.Repositories
                 var stats = new DashboardStatsDto
                 {
                     TotalSalesMonth = totalSalesMonth,
+                    TotalSalesYear = totalSalesYear,
                     OrdersToFulfill = ordersToFulfill,
                     PendingPayment = pendingPayment,
-                    TotalOrdersMonth = totalOrdersMonth
+                    TotalOrdersMonth = totalOrdersMonth,
+                    RevenueGrowthPercentage = Math.Round(revenueGrowthPercentage, 1) 
                 };
+
                 return stats;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error Updating Status: {ex.Message}");
+                throw new Exception($"Error retrieving dashboard stats: {ex.Message}");
             }
         }
+
         public async Task<Unit> DeleteOrderAsync(DeleteOrderCommand request)
         {
             try
@@ -888,6 +1035,36 @@ namespace SmartTask.Persistence.Repositories
             catch (Exception ex)
             {
                 throw new Exception($"Error Updating Status: {ex.Message}");
+            }
+        }
+        public async Task<Unit> DeleteCustomerAsync(DeleteCustomerCommand request)
+        {
+            try
+            {
+                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+                {
+                    throw new Exception("User is not authenticated.");
+                }
+
+                var customer = await _context.Customers
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.CompanyId == companyId);
+
+                if (customer == null || customer.IsDeleted)
+                {
+                    throw new Exception("Customer not found.");
+                }
+
+                customer.IsDeleted = true;
+                customer.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return Unit.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error deleting customer: {ex.Message}");
             }
         }
         public async Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId)
@@ -1258,7 +1435,7 @@ namespace SmartTask.Persistence.Repositories
                     RateId = c.ServiceCode,       
                     CourierName = c.CourierName,     
                     ServiceName = c.ServiceType,   
-                    Price = c.Total,                 
+                    Price = c.Total,              
                     Currency = c.Currency,   
                     EstimatedDeliveryTime = c.DeliveryEta,
                     CourierLogoUrl = c.CourierImage    
@@ -1272,8 +1449,29 @@ namespace SmartTask.Persistence.Repositories
             }
         }
 
+        public async Task<Response<string>> AddCustomerAsync(Customerrequest request)
+        {
+            if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId))
+            {
+                throw new Exception("User is not authenticated.");
+            }
+            var customer = new Customer
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = companyId,
+                Name = request.Name,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    WhatsAppNumber = request.WhatsAppNumber,
+                    Address = request.Address,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _context.Customers.AddAsync(customer);
+                await _unitOfWork.SaveChangesAsync();
+                return Response<string>.Success("Customer added successfully.");
+            }
+        }
     }
-}
 
 
 

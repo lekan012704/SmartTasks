@@ -9,5 +9,7 @@ namespace SmartTask.Application.Features.Orders.Queries
         public int OrdersToFulfill { get; set; }
         public int PendingPayment { get; set; }
         public int TotalOrdersMonth { get; set; }
+        public decimal TotalSalesYear { get; set; }
+        public decimal RevenueGrowthPercentage { get; set; }
     }
 }

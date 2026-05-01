@@ -37,6 +37,7 @@ namespace SmartTask.Persistence.Contexts
         public DbSet<Permission> Permission { get; set; }   
         public DbSet<RolePermission> RolePermission { get; set; }
         public DbSet<Notification> Notification { get; set; }
+        public DbSet<Customer>Customers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -88,9 +89,10 @@ namespace SmartTask.Persistence.Contexts
                       .WithMany() 
                       .HasForeignKey(o => o.ApplicationUserId)
                       .IsRequired()
-                      .OnDelete(DeleteBehavior.Restrict); 
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.Ignore(o => o.TotalDue);
 
-              
+
                 entity.Property(o => o.CustomerName).HasMaxLength(255).IsRequired();
                 entity.Property(o => o.WhatsAppNumber).HasMaxLength(50);
                 entity.Property(o => o.DeliveryAddress).HasMaxLength(1000);

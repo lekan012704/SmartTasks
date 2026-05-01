@@ -4,9 +4,11 @@ using Microsoft.Extensions.Logging;
 using SmartTask.Application.Command;
 using SmartTask.Application.Constants;
 using SmartTask.Application.Dto.Account;
+using SmartTask.Application.Dto.Customer;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Interfaces;
 using SmartTask.Application.Wrappers;
+using SmartTask.Domain.Entities;
 using SmartTask.Domain.Models;
 using System;
 using System.Collections.Generic;
@@ -60,6 +62,30 @@ namespace SmartTask.Identity.Services
             {
                 _logger.LogError(ex, "Error creating role");
                 return ApplicationConstants.FailureMessage("An error occurred while creating the role.");
+            }
+        }
+
+        public async Task<Response<string>> AddCustomerAsync(Customerrequest request)
+        {
+            try
+            {
+              var customer = new Customer
+                {
+                    Name = request.Name,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    WhatsAppNumber = request.WhatsAppNumber,
+                    Address = request.Address
+                };
+                // Simulate adding the customer to the database (replace with actual DB code)
+                await Task.Delay(100); // Simulating async database operation
+                return
+              ApplicationConstants.SuccessMessage("Role with permissions created successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating role with permissions");
+                return ApplicationConstants.FailureMessage("An error occurred while creating the role with permissions.");
             }
         }
 

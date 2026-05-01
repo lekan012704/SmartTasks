@@ -1,11 +1,14 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartTask.Application.Command;
 using SmartTask.Application.Command.Order;
 using SmartTask.Application.Features.Orders.Commands;
 using SmartTask.Application.Features.Orders.Queries;
 using SmartTask.Application.Query;
+using SmartTask.Application.Query.Order;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SmartTask.Api.Controllers
 {
@@ -51,6 +54,7 @@ namespace SmartTask.Api.Controllers
 
             return Ok(result);
         }
+        
         [HttpGet("get-order-by-id")]
         public async Task<IActionResult> GetOrderById([FromQuery]GetOrderByIdQuery query)
         {

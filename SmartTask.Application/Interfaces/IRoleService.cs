@@ -1,4 +1,5 @@
 ﻿using SmartTask.Application.Command;
+using SmartTask.Application.Dto.Customer;
 using SmartTask.Application.Dto.Role;
 using SmartTask.Application.Wrappers;
 using System;
@@ -14,6 +15,7 @@ namespace SmartTask.Application.Interfaces
         Task<bool> RoleExistsAsync(string roleName);
 
         Task<Response<string>> CreateRoleAsync(CreateRoleModel request);
+        Task<Response<string>> AddCustomerAsync(Customerrequest request);
 
         Task<Response<string>> AssignRoleToUserAsync(string userId, string roleName);
 

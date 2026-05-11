@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartTask.Application.Interfaces;
+using SmartTask.Domain.Entities;
 using SmartTask.Shared.Helpers;
 using SmartTask.Shared.Services;
 using System;
@@ -17,7 +18,8 @@ namespace SmartTask.Shared
         {
             services.AddTransient<IAuthenticatedUserService, AuthenticatedUserService>();
             services.AddTransient<IEmailService, EmailService>();
-            services.Configure<EmailSettings>(options => _config.GetSection("EmailSettings"));
+            
+            //services.Configure<MailSettings>(options => _config.GetSection("MailSettings"));
 
         }
     }

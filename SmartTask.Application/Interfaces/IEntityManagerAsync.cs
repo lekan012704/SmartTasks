@@ -53,6 +53,7 @@ namespace SmartTask.Application.Interfaces
         Task<Unit> UpdateProfileAsync(UpdateProfileCommand request);
         Task<Response<string>> ForgotPasswordAsync(ForgotPasswordCommand request);
         Task<Response<string>> ResetPasswordAsync(ResetPasswordCommand request);
+        Task<Response<string>> ChangePasswordAsync(ChangePasswordCommand request);
         Task<Response<List<BankDto>>> GetNigerianBanksAsync();
         Task<Response<AccountVerificationResponseDto>> AccountVerification(VerifyBankAccountCommand request);
         Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId);

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using SmartTask.Application.Command;
 using SmartTask.Application.Command.Customer;
@@ -64,9 +65,10 @@ namespace SmartTask.Persistence.Repositories
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IShipBubbleService _shipBubbleService;
         private readonly IBackgroundJobClient _jobClient;
-        private readonly IMailService _mailService;
+        private readonly IEmailService _mailService;
         private readonly IPaystackService _paystackService;
-        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IShipBubbleService shipBubbleService, IBackgroundJobClient jobClient, IMailService mailService, IPaystackService paystackService)
+        private readonly AppSettings _appSettings;
+        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IShipBubbleService shipBubbleService, IBackgroundJobClient jobClient, IEmailService mailService, IPaystackService paystackService, IOptions<AppSettings> appSettings)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -82,6 +84,7 @@ namespace SmartTask.Persistence.Repositories
             _jobClient = jobClient;
             _mailService = mailService;
             _paystackService = paystackService;
+            _appSettings = appSettings.Value;
         }
 
 
@@ -994,7 +997,7 @@ namespace SmartTask.Persistence.Repositories
                     OrdersToFulfill = ordersToFulfill,
                     PendingPayment = pendingPayment,
                     TotalOrdersMonth = totalOrdersMonth,
-                    RevenueGrowthPercentage = Math.Round(revenueGrowthPercentage, 1) 
+                    RevenueGrowthPercentage = Math.Round(revenueGrowthPercentage, 1)
                 };
 
                 return stats;
@@ -1277,7 +1280,7 @@ namespace SmartTask.Persistence.Repositories
             var emailEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(email));
             var resetLink = $"{baseUrl}/reset-password?token={tokenEncoded}&email={emailEncoded}";
             var emailBody = $"<p>You requested a password reset. Please use the following link to reset your password:</p><p><a href='{resetLink}'>Reset Password</a></p>";
-            await _mailService.SendAsync(email, "SmartSeller Password Reset", emailBody);
+            await _mailService.SendEmailAsync(email, "SmartSeller Password Reset", emailBody);
             return Response<string>.Success("Password reset email sent successfully.");
         }
         public async Task<Response<string>> ResetPasswordAsync(ResetPasswordCommand request)
@@ -1288,30 +1291,35 @@ namespace SmartTask.Persistence.Repositories
 
                 if (user == null)
                 {
-                    return Response<string>.Failure("Invalid token or email.");
+                    return Response<string>.Success("If the email exists, a reset link has been sent.");
                 }
 
-                // 2. Decode the token (The token received from the frontend is URL-encoded)
-                var tokenDecoded = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-                // 3. Reset the password
-                var result = await _userManager.ResetPasswordAsync(user, tokenDecoded, request.NewPassword);
+                var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
-                if (result.Succeeded)
-                {
-                    return Response<string>.Success("Password has been successfully reset.");
-                }
+                var resetUrl = $"{_appSettings.FrontendUrl}/reset-password?email={user.Email}&token={encodedToken}";
 
-                // Return detailed errors if Identity failed
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                return Response<string>.Failure($"Password reset failed: {errors}");
+                var emailBody = $@"
+            <h3>Password Reset</h3>
+            <p>Use the token below to reset your password:</p>
+            <h2>{encodedToken}</h2>
+            <p>Or click the link below:</p>
+            <a href='{resetUrl}'>Reset Password</a>
+        ";
+
+                // 4. Send email
+                await _mailService.SendEmailAsync(user.Email!, "Password Reset", emailBody);
+
+                return Response<string>.Success("Password reset token sent to your email.");
             }
             catch (Exception ex)
             {
-                throw new Exception($"An error occurred while resetting password: {ex.Message}");
+                throw new Exception($"Error sending reset token: {ex.Message}");
             }
-
         }
+
+
         public async Task<Response<List<BankDto>>> GetNigerianBanksAsync()
         {
             try
@@ -1432,13 +1440,13 @@ namespace SmartTask.Persistence.Repositories
                 // 4. Map the API Data to YOUR App's DTO
                 var mappedRates = apiResponse.Data.Couriers.Select(c => new ShipbubbleRateOption
                 {
-                    RateId = c.ServiceCode,       
-                    CourierName = c.CourierName,     
-                    ServiceName = c.ServiceType,   
-                    Price = c.Total,              
-                    Currency = c.Currency,   
+                    RateId = c.ServiceCode,
+                    CourierName = c.CourierName,
+                    ServiceName = c.ServiceType,
+                    Price = c.Total,
+                    Currency = c.Currency,
                     EstimatedDeliveryTime = c.DeliveryEta,
-                    CourierLogoUrl = c.CourierImage    
+                    CourierLogoUrl = c.CourierImage
                 }).ToList();
 
                 return new Response<List<ShipbubbleRateOption>>(mappedRates);
@@ -1460,18 +1468,55 @@ namespace SmartTask.Persistence.Repositories
                 Id = Guid.NewGuid(),
                 CompanyId = companyId,
                 Name = request.Name,
-                    Email = request.Email,
-                    PhoneNumber = request.PhoneNumber,
-                    WhatsAppNumber = request.WhatsAppNumber,
-                    Address = request.Address,
-                    CreatedAt = DateTime.UtcNow
-                };
-                await _context.Customers.AddAsync(customer);
-                await _unitOfWork.SaveChangesAsync();
-                return Response<string>.Success("Customer added successfully.");
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                WhatsAppNumber = request.WhatsAppNumber,
+                Address = request.Address,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.Customers.AddAsync(customer);
+            await _unitOfWork.SaveChangesAsync();
+            return Response<string>.Success("Customer added successfully.");
+        }
+        
+    public async Task<Response<string>> ChangePasswordAsync(ChangePasswordCommand request)
+        {
+            try
+            {
+                if (request.NewPassword != request.ConfirmPassword)
+                {
+                    return Response<string>.Failure("Passwords do not match.");
+                }
+
+                var decodedToken = Encoding.UTF8.GetString(
+                    WebEncoders.Base64UrlDecode(request.Token)
+                );
+
+                var users = _userManager.Users.ToList();
+
+                foreach (var user in users)
+                {
+                    var result = await _userManager.ResetPasswordAsync(
+                        user,
+                        decodedToken,
+                        request.NewPassword
+                    );
+
+                    if (result.Succeeded)
+                    {
+                        return Response<string>.Success("Password changed successfully.");
+                    }
+                }
+
+                return Response<string>.Failure("Invalid or expired token.");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error changing password: {ex.Message}");
             }
         }
     }
+}
 
 
 

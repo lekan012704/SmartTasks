@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using SmartTask.Application.Interfaces;
+using SmartTask.Domain.Entities;
 using SmartTask.Shared.Helpers;
 using System;
 using System.Collections.Generic;
@@ -14,8 +15,8 @@ namespace SmartTask.Shared.Services
 {
     public class EmailService :IEmailService
     {
-        private readonly EmailSettings _email;
-        public EmailService(IOptions<EmailSettings> email)
+        private readonly MailSettings _email;
+        public EmailService(IOptions<MailSettings> email)
         {
             _email = email.Value;
         }

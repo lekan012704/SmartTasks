@@ -43,7 +43,7 @@ namespace SmartTask.Api.Controllers
             var result = await _mediator.Send(query);
             return Ok(result);
         }
-        [HttpPatch("{id:guid}/status")]
+        [HttpPatch("{id:guid}")]
         public async Task<IActionResult> UpdateCustomer(Guid id, [FromBody] UpdateCustomer dto)
         {
             var command = new UpdateCustomerCommand(dto, id);

@@ -67,9 +67,35 @@ namespace SmartTask.Identity.Services
                         return response;
                     }
 
-                    var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+                    var result = await _signInManager.CheckPasswordSignInAsync(
+                    user,
+                    request.Password,
+                    false
+                );
+
                     if (!result.Succeeded)
-                        return ApplicationConstants.FailureMessage<LoginResponse>(null, "Unsuccessful");
+                    {
+                        if (result.IsLockedOut)
+                        {
+                            return ApplicationConstants.FailureMessage<LoginResponse>(
+                                null,
+                                "Account is locked."
+                            );
+                        }
+
+                        if (result.IsNotAllowed)
+                        {
+                            return ApplicationConstants.FailureMessage<LoginResponse>(
+                                null,
+                                "Login not allowed. Confirm email or activate account."
+                            );
+                        }
+
+                        return ApplicationConstants.FailureMessage<LoginResponse>(
+                            null,
+                            "Invalid Credentials"
+                        );
+                    }
 
                     var token = await _jwtService.GenerateToken(user);
                     var handler = new JwtSecurityTokenHandler();

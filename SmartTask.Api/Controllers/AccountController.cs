@@ -101,6 +101,17 @@ namespace SmartTask.Api.Controllers
             }
             return BadRequest(result);
         }
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            if (result.Succeeded)
+            {
+                return Ok(result);
+            }
+            return BadRequest(result);
+        }
 
         //[HasPermission(Permissions.Report.View)]
         //[HttpGet("get-completed-task")]

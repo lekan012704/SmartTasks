@@ -50,7 +50,7 @@ namespace SmartTask.Api
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             });
             builder.Services.Configure<ShipBubbleSettings>(builder.Configuration.GetSection("ShipBubbleSettings"));
-            builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("EmailSettings"));
+            builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
             builder.Services.Configure<PaystackSettings>(builder.Configuration.GetSection("PaystackSettings"));
 
 

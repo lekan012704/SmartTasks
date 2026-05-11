@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartTask.Application.Interfaces;
+using SmartTask.Domain.Entities;
 using SmartTask.Identity.Services;
 using SmartTask.Identity.Services.SmartTasks.Infrastructure.Identity.Managers;
 using SmartTask.Persistence.Contexts;
@@ -37,8 +38,8 @@ namespace SmartTask.Persistence
             services.AddTransient<INotificationService, NotificationService>();
             services.AddTransient<IDbConnection>(sp =>
     new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));    
-
+            services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
+            services.Configure<AppSettings>(options => configuration.GetSection("AppSettings"));
 
         }
     }

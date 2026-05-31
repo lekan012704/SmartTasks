@@ -455,7 +455,7 @@ namespace SmartTask.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "Role");
-
+                
             migrationBuilder.DropTable(
                 name: "User");
 

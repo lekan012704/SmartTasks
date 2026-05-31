@@ -31,7 +31,7 @@ namespace SmartTask.Persistence
             // Register JwtService or token generator class
             services.AddScoped<JwtService>();
             services.AddScoped<IAccountService, AccountService>();
-            services.AddScoped<IShipBubbleService, ShipBubbleService>();
+            //services.AddScoped<IShipBubbleService, ShipBubbleService>();
             services.AddScoped<IPaystackService, PaystackService>();
             services.AddScoped<IMailService, MailService>();
             services.AddScoped<IRoleService, RoleService>();

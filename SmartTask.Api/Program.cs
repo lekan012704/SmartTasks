@@ -61,7 +61,7 @@ namespace SmartTask.Api
             // Hangfire with PostgreSQL storage (was UseSqlServerStorage)
             builder.Services.AddHangfire(config =>
                 config.UsePostgreSqlStorage(c =>
-                    c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
+                    c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection"))));
 
             builder.Services.AddHangfireServer();
             builder.Services.AddEndpointsApiExplorer();

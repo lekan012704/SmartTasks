@@ -99,11 +99,8 @@ namespace SmartTask.Api
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             // Removed UseHttpsRedirection — Render handles HTTPS at the proxy level
             // Keeping it causes redirect loops on Render

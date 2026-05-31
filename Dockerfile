@@ -9,7 +9,6 @@ COPY SmartTask.Application/SmartTask.Application.csproj SmartTask.Application/
 COPY SmartTask.Domain/SmartTask.Domain.csproj SmartTask.Domain/
 COPY SmartTask.Persistence/SmartTask.Persistence.csproj SmartTask.Persistence/
 COPY SmartTask.Identity/SmartTask.Identity.csproj SmartTask.Identity/
-COPY SmartTask.Infrastructure/SmartTask.Infrastructure.csproj SmartTask.Infrastructure/
 COPY SmartTask.Shared/SmartTask.Shared.csproj SmartTask.Shared/
 
 RUN dotnet restore

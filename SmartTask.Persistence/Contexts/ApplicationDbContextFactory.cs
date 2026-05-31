@@ -22,7 +22,7 @@ namespace SmartTask.Persistence.Contexts
             // Configure DbContextOptions
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
             var connectionString = configuration.GetConnectionString("DefaultConnection");
-            optionsBuilder.UseSqlServer(connectionString, sqlServerOptions => sqlServerOptions.CommandTimeout(180));
+            optionsBuilder.UseNpgsql(connectionString, sqlServerOptions => sqlServerOptions.CommandTimeout(180));
 
             // Return an instance of your context
             return new ApplicationDbContext(optionsBuilder.Options);

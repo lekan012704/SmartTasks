@@ -47,7 +47,7 @@ namespace SmartTask.Application.Interfaces
         Task<List<CustomerDto>> GetAllCustomersAsync();
         Task<Unit> DeleteOrderAsync(DeleteOrderCommand request);
         Task<Unit> DeleteCustomerAsync(DeleteCustomerCommand request);
-         Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId);
+         //Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId);
         Task<string> GetCompanyNameAsync();
         Task<ProfileDetailsDto> GetProfileAsync();
         Task<Unit> UpdateProfileAsync(UpdateProfileCommand request);
@@ -56,7 +56,7 @@ namespace SmartTask.Application.Interfaces
         Task<Response<string>> ChangePasswordAsync(ChangePasswordCommand request);
         Task<Response<List<BankDto>>> GetNigerianBanksAsync();
         Task<Response<AccountVerificationResponseDto>> AccountVerification(VerifyBankAccountCommand request);
-        Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId);
+        //Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId);
     }
 }
  

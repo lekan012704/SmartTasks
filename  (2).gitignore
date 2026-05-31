@@ -1,0 +1,67 @@
+# ========================
+# SENSITIVE FILES - Never commit these
+# ========================
+appsettings.json
+appsettings.Production.json
+appsettings.Development.json
+*.env
+*.env.*
+render.env
+render.env.example
+
+# ========================
+# ASP.NET / .NET
+# ========================
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.rsuser
+*.DotSettings.user
+
+# Migrations - optional: remove this line if you WANT to commit migrations
+# Migrations/
+
+# Published output
+publish/
+out/
+
+# ========================
+# EF Core
+# ========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
+Logs/
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Rider / JetBrains
+# ========================
+.idea/
+
+# ========================
+# Visual Studio Code
+# ========================
+.vscode/
+
+# ========================
+# Node (if you have any frontend in same repo)
+# ========================
+node_modules/
+npm-debug.log*

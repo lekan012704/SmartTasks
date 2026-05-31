@@ -78,6 +78,7 @@ namespace SmartTask.Api.Controllers
             var profile = await _mediator.Send(query);
             return Ok(profile);
         }
+        [HasPermission(Permissions.Settings.Update)]
         [HttpPatch("update-profile")] 
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command)
         {  

@@ -9,7 +9,7 @@ namespace SmartTask.Application.Interfaces
 {
    public interface  IShipBubbleService
     {
-        Task<ShipmentResultDto> CreateShipmentAutomaticallyAsync(FetchRatesDto fetchRates);
-        Task<dynamic> FetchRatesAsync(FetchRatesDto fetchRates);
+        //Task<ShipmentResultDto> CreateShipmentAutomaticallyAsync(FetchRatesDto fetchRates);
+        //Task<dynamic> FetchRatesAsync(FetchRatesDto fetchRates);
     }
 }

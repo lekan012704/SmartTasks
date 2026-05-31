@@ -1,7 +1,8 @@
-﻿using Hangfire; 
+﻿using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models; 
+using Microsoft.OpenApi.Models;
 using SmartTask.Application;
 using SmartTask.Application.Interfaces;
 using SmartTask.Domain;
@@ -31,32 +32,36 @@ namespace SmartTask.Api
 
             builder.Services.AddControllers();
             builder.Services.AddSignalR();
+
+            // CORS — AllowCredentials() is required for SignalR, so we can't use AllowAnyOrigin()
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins(
+                            builder.Configuration["AllowedOrigins"] ?? "http://localhost:3000"
+                          )
                           .AllowAnyHeader()
-                          .AllowAnyMethod();
+                          .AllowAnyMethod()
+                          .AllowCredentials();
                 });
             });
 
             builder.Services.AddHttpClient();
-            builder.Services.AddHttpClient("ShipBubbleSettingsApi", client =>
-            {
-         
-                client.BaseAddress = new Uri(builder.Configuration["ShipBubbleSettings:BaseUrl"]);
-                var apiKey = builder.Configuration["ShipBubbleSettings:ApiKey"];
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-            });
-            builder.Services.Configure<ShipBubbleSettings>(builder.Configuration.GetSection("ShipBubbleSettings"));
+            //builder.Services.AddHttpClient("ShipBubbleSettingsApi", client =>
+            //{
+            //    client.BaseAddress = new Uri(builder.Configuration["ShipBubbleSettings:BaseUrl"]);
+            //    var apiKey = builder.Configuration["ShipBubbleSettings:ApiKey"];
+            //    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            //});
+            //builder.Services.Configure<ShipBubbleSettings>(builder.Configuration.GetSection("ShipBubbleSettings"));
             builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
             builder.Services.Configure<PaystackSettings>(builder.Configuration.GetSection("PaystackSettings"));
 
-
-            // Add Hangfire and its storage
+            // Hangfire with PostgreSQL storage (was UseSqlServerStorage)
             builder.Services.AddHangfire(config =>
-                config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+                config.UsePostgreSqlStorage(c =>
+                    c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
             builder.Services.AddHangfireServer();
             builder.Services.AddEndpointsApiExplorer();
@@ -65,7 +70,6 @@ namespace SmartTask.Api
             {
                 c.SwaggerDoc("v1", new() { Title = "SmartTasks API", Version = "v1" });
 
-                // Add JWT support
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
@@ -101,18 +105,17 @@ namespace SmartTask.Api
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            // Removed UseHttpsRedirection — Render handles HTTPS at the proxy level
+            // Keeping it causes redirect loops on Render
             app.UseRouting();
 
-            // Your order is correct here
             app.UseCors();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapHub<NotificationHub>("/hubs/notifications");
 
-            // Secure the Hangfire dashboard
             app.MapHangfireDashboard()
-               .RequireAuthorization(); // Requires any authenticated user
+               .RequireAuthorization();
 
             app.MapControllers();
 
@@ -124,7 +127,6 @@ namespace SmartTask.Api
 
                 try
                 {
-                    // Seed Super Admin
                     var adminLogger = loggerFactory.CreateLogger("DefaultSuperAdmin");
                     await DefaultSuperAdmin.SeedAsync(services);
                     adminLogger.LogInformation("Super Admin seeding complete.");
@@ -137,7 +139,6 @@ namespace SmartTask.Api
 
                 try
                 {
-                    // Seed Roles and Permissions
                     var dbContext = services.GetRequiredService<ApplicationDbContext>();
                     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
                     var roleLogger = loggerFactory.CreateLogger("RolePermissionSeeder");
@@ -161,7 +162,9 @@ namespace SmartTask.Api
                 }
             }
 
-            app.Run();
+            // Render injects PORT env variable — bind to it
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+            app.Run($"http://0.0.0.0:{port}");
         }
     }
 }

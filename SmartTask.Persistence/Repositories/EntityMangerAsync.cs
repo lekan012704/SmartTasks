@@ -1,12 +1,10 @@
-﻿using Azure.Core;
-using Dapper;
+﻿using Dapper;
 using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -1070,100 +1068,100 @@ namespace SmartTask.Persistence.Repositories
                 throw new Exception($"Error deleting customer: {ex.Message}");
             }
         }
-        public async Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId)
-        {
-            try
-            {
-                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
+        //public async Task<BookDispatchResponseDto> DispatchOrderAsync(Guid orderId)
+        //{
+        //    try
+        //    {
+        //        if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
 
-                var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
-                if (order == null) throw new Exception("Order not found.");
-                if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
-                    throw new Exception("Order is not in a state to be dispatched.");
+        //        var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
+        //        if (order == null) throw new Exception("Order not found.");
+        //        if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
+        //            throw new Exception("Order is not in a state to be dispatched.");
 
-                // Get default sender address (your existing code)
-                var senderAddress = await _context.Company
-                    .Where(a => a.Id == companyId)
-                    .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
-                    .FirstOrDefaultAsync();
+        //        // Get default sender address (your existing code)
+        //        var senderAddress = await _context.Company
+        //            .Where(a => a.Id == companyId)
+        //            .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
+        //            .FirstOrDefaultAsync();
 
-                var receiverAddress = new AddressDto
-                {
-                    name = order.CustomerName,
-                    phone = order.WhatsAppNumber,
-                    email = order.CustomerEmail,
-                    address = order.DeliveryAddress
-                };
+        //        var receiverAddress = new AddressDto
+        //        {
+        //            name = order.CustomerName,
+        //            phone = order.WhatsAppNumber,
+        //            email = order.CustomerEmail,
+        //            address = order.DeliveryAddress
+        //        };
 
-                // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
-                var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
+        //        // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
+        //        var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
 
-                // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
-                var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
+        //        // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
+        //        var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
 
-                // Map to the shipping DTO (fill defaults like weight/dimensions/category)
-                var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
-                {
-                    ProductName = i.Description,      // fallback
-                    Description = i.Description,
-                    Price = i.Price,
-                    Quantity = i.Quantity,
-                    Weight = 1,                       // set sensible defaults or compute if you can
-                    PackageLength = 12,
-                    PackageWidth = 10,
-                    PackageHeight = 10,
-                    CategoryId = 1                     // or logic to derive category
-                }).ToList();
+        //        // Map to the shipping DTO (fill defaults like weight/dimensions/category)
+        //        var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
+        //        {
+        //            ProductName = i.Description,      // fallback
+        //            Description = i.Description,
+        //            Price = i.Price,
+        //            Quantity = i.Quantity,
+        //            Weight = 1,                       // set sensible defaults or compute if you can
+        //            PackageLength = 12,
+        //            PackageWidth = 10,
+        //            PackageHeight = 10,
+        //            CategoryId = 1                     // or logic to derive category
+        //        }).ToList();
 
-                if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
+        //        if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
 
-                // totals (optional)
-                var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
-                var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
+        //        // totals (optional)
+        //        var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
+        //        var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
 
-                // Build FetchRatesDto and attach Items — everything shipping needs is here
-                var fetchRates = new FetchRatesDto
-                {
-                    Sender = senderAddress,
-                    Receiver = receiverAddress,
-                    Weight = (decimal)totalWeight,
-                    Amount = totalAmount,
-                    ServiceType = "delivery",
-                    Items = orderItemsForShipping
-                };
+        //        // Build FetchRatesDto and attach Items — everything shipping needs is here
+        //        var fetchRates = new FetchRatesDto
+        //        {
+        //            Sender = senderAddress,
+        //            Receiver = receiverAddress,
+        //            Weight = (decimal)totalWeight,
+        //            Amount = totalAmount,
+        //            ServiceType = "delivery",
+        //            Items = orderItemsForShipping
+        //        };
 
-                // optional: set package dimension on DTO if you want
-                fetchRates.PackageDimension = new PackageDimension
-                {
-                    length = orderItemsForShipping.Max(i => i.PackageLength),
-                    width = orderItemsForShipping.Max(i => i.PackageWidth),
-                    height = orderItemsForShipping.Max(i => i.PackageHeight)
-                };
+        //        // optional: set package dimension on DTO if you want
+        //        fetchRates.PackageDimension = new PackageDimension
+        //        {
+        //            length = orderItemsForShipping.Max(i => i.PackageLength),
+        //            width = orderItemsForShipping.Max(i => i.PackageWidth),
+        //            height = orderItemsForShipping.Max(i => i.PackageHeight)
+        //        };
 
-                // Call the shipping service which will call FetchRatesAsync(fetchRates) internally
-                var shipmentResult = await _shipBubbleService.CreateShipmentAutomaticallyAsync(fetchRates);
+        //        // Call the shipping service which will call FetchRatesAsync(fetchRates) internally
+        //        var shipmentResult = await _shipBubbleService.CreateShipmentAutomaticallyAsync(fetchRates);
 
-                // Update order with tracking info (your existing code)
-                order.Status = OrderStatus.InTransit;
-                order.TrackingNumber = shipmentResult.TrackingNumber;
-                order.LogisticsPartner = shipmentResult.CourierName;
-                order.UpdatedAt = DateTime.UtcNow;
+        //        // Update order with tracking info (your existing code)
+        //        order.Status = OrderStatus.InTransit;
+        //        order.TrackingNumber = shipmentResult.TrackingNumber;
+        //        order.LogisticsPartner = shipmentResult.CourierName;
+        //        order.UpdatedAt = DateTime.UtcNow;
 
-                await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.SaveChangesAsync();
 
-                return new BookDispatchResponseDto
-                {
-                    OrderId = order.Id,
-                    TrackingNumber = order.TrackingNumber,
-                    LogisticsPartner = order.LogisticsPartner,
-                    NewStatus = order.Status
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error Dispatching Order: {ex.Message}");
-            }
-        }
+        //        return new BookDispatchResponseDto
+        //        {
+        //            OrderId = order.Id,
+        //            TrackingNumber = order.TrackingNumber,
+        //            LogisticsPartner = order.LogisticsPartner,
+        //            NewStatus = order.Status
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception($"Error Dispatching Order: {ex.Message}");
+        //    }
+        //}
         public async Task<string> GetCompanyNameAsync()
         {
             try
@@ -1359,103 +1357,103 @@ namespace SmartTask.Persistence.Repositories
             }
         }
 
-        public async Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId)
-        {
-            try
-            {
-                if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
+        //public async Task<Response<List<ShipbubbleRateOption>>> GetRates(Guid orderId)
+        //{
+        //    try
+        //    {
+        //        if (!Guid.TryParse(_authenticatedUserService.CompanyId, out var companyId)) throw new Exception("User is not authenticated.");
 
-                var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
-                if (order == null) throw new Exception("Order not found.");
-                if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
-                    throw new Exception("Order is not in a state to be dispatched.");
+        //        var order = await _context.Order.FirstOrDefaultAsync(o => o.Id == orderId);
+        //        if (order == null) throw new Exception("Order not found.");
+        //        if (order.Status != OrderStatus.ReadyForDispatch && order.Status != OrderStatus.Paid)
+        //            throw new Exception("Order is not in a state to be dispatched.");
 
-                // Get default sender address (your existing code)
-                var senderAddress = await _context.Company
-                    .Where(a => a.Id == companyId)
-                    .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
-                    .FirstOrDefaultAsync();
+        //        // Get default sender address (your existing code)
+        //        var senderAddress = await _context.Company
+        //            .Where(a => a.Id == companyId)
+        //            .Select(a => new AddressDto { name = a.Name, phone = a.PhoneNumber, email = a.Email, address = a.Address })
+        //            .FirstOrDefaultAsync();
 
-                var receiverAddress = new AddressDto
-                {
-                    name = order.CustomerName,
-                    phone = order.WhatsAppNumber,
-                    email = order.CustomerEmail,
-                    address = order.DeliveryAddress
-                };
+        //        var receiverAddress = new AddressDto
+        //        {
+        //            name = order.CustomerName,
+        //            phone = order.WhatsAppNumber,
+        //            email = order.CustomerEmail,
+        //            address = order.DeliveryAddress
+        //        };
 
-                // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
-                var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
+        //        // --- SAFE: deserialize DB JSON into the DB-shaped class, then map to OrderItemDto ---
+        //        var json = string.IsNullOrWhiteSpace(order.OrderItemsJson) ? "[]" : order.OrderItemsJson;
 
-                // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
-                var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
+        //        // If your DB JSON matches OrderItem (Description, Price, Quantity), do this:
+        //        var dbItems = JsonConvert.DeserializeObject<List<OrderItem>>(json) ?? new List<OrderItem>();
 
-                // Map to the shipping DTO (fill defaults like weight/dimensions/category)
-                var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
-                {
-                    ProductName = i.Description,      // fallback
-                    Description = i.Description,
-                    Price = i.Price,
-                    Quantity = i.Quantity,
-                    Weight = 1,                       // set sensible defaults or compute if you can
-                    PackageLength = 12,
-                    PackageWidth = 10,
-                    PackageHeight = 10,
-                    CategoryId = 1                     // or logic to derive category
-                }).ToList();
+        //        // Map to the shipping DTO (fill defaults like weight/dimensions/category)
+        //        var orderItemsForShipping = dbItems.Select(i => new OrderItemDto
+        //        {
+        //            ProductName = i.Description,      // fallback
+        //            Description = i.Description,
+        //            Price = i.Price,
+        //            Quantity = i.Quantity,
+        //            Weight = 1,                       // set sensible defaults or compute if you can
+        //            PackageLength = 12,
+        //            PackageWidth = 10,
+        //            PackageHeight = 10,
+        //            CategoryId = 1                     // or logic to derive category
+        //        }).ToList();
 
-                if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
+        //        if (!orderItemsForShipping.Any()) throw new Exception("Order has no items.");
 
-                // totals (optional)
-                var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
-                var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
+        //        // totals (optional)
+        //        var totalWeight = orderItemsForShipping.Sum(x => x.Weight * x.Quantity);
+        //        var totalAmount = orderItemsForShipping.Sum(x => x.Price * x.Quantity);
 
-                // Build FetchRatesDto and attach Items — everything shipping needs is here
-                var fetchRates = new FetchRatesDto
-                {
-                    Sender = senderAddress,
-                    Receiver = receiverAddress,
-                    Weight = (decimal)totalWeight,
-                    Amount = totalAmount,
-                    ServiceType = "delivery",
-                    Items = orderItemsForShipping
-                };
+        //        // Build FetchRatesDto and attach Items — everything shipping needs is here
+        //        var fetchRates = new FetchRatesDto
+        //        {
+        //            Sender = senderAddress,
+        //            Receiver = receiverAddress,
+        //            Weight = (decimal)totalWeight,
+        //            Amount = totalAmount,
+        //            ServiceType = "delivery",
+        //            Items = orderItemsForShipping
+        //        };
 
-                // optional: set package dimension on DTO if you want
-                fetchRates.PackageDimension = new PackageDimension
-                {
-                    length = orderItemsForShipping.Max(i => i.PackageLength),
-                    width = orderItemsForShipping.Max(i => i.PackageWidth),
-                    height = orderItemsForShipping.Max(i => i.PackageHeight)
-                };
-                dynamic rawResult = await _shipBubbleService.FetchRatesAsync(fetchRates);
+        //        // optional: set package dimension on DTO if you want
+        //        fetchRates.PackageDimension = new PackageDimension
+        //        {
+        //            length = orderItemsForShipping.Max(i => i.PackageLength),
+        //            width = orderItemsForShipping.Max(i => i.PackageWidth),
+        //            height = orderItemsForShipping.Max(i => i.PackageHeight)
+        //        };
+        //        dynamic rawResult = await _shipBubbleService.FetchRatesAsync(fetchRates);
 
-                var apiResponse = ((Newtonsoft.Json.Linq.JObject)rawResult).ToObject<ShipbubbleApiResponse>();
+        //        var apiResponse = ((Newtonsoft.Json.Linq.JObject)rawResult).ToObject<ShipbubbleApiResponse>();
 
-                if (apiResponse?.Data?.Couriers == null)
-                {
-                    return new Response<List<ShipbubbleRateOption>>("No shipping options available.");
-                }
+        //        if (apiResponse?.Data?.Couriers == null)
+        //        {
+        //            return new Response<List<ShipbubbleRateOption>>("No shipping options available.");
+        //        }
 
-                // 4. Map the API Data to YOUR App's DTO
-                var mappedRates = apiResponse.Data.Couriers.Select(c => new ShipbubbleRateOption
-                {
-                    RateId = c.ServiceCode,
-                    CourierName = c.CourierName,
-                    ServiceName = c.ServiceType,
-                    Price = c.Total,
-                    Currency = c.Currency,
-                    EstimatedDeliveryTime = c.DeliveryEta,
-                    CourierLogoUrl = c.CourierImage
-                }).ToList();
+        //        // 4. Map the API Data to YOUR App's DTO
+        //        var mappedRates = apiResponse.Data.Couriers.Select(c => new ShipbubbleRateOption
+        //        {
+        //            RateId = c.ServiceCode,
+        //            CourierName = c.CourierName,
+        //            ServiceName = c.ServiceType,
+        //            Price = c.Total,
+        //            Currency = c.Currency,
+        //            EstimatedDeliveryTime = c.DeliveryEta,
+        //            CourierLogoUrl = c.CourierImage
+        //        }).ToList();
 
-                return new Response<List<ShipbubbleRateOption>>(mappedRates);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error Getting Order: {ex.Message}");
-            }
-        }
+        //        return new Response<List<ShipbubbleRateOption>>(mappedRates);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception($"Error Getting Order: {ex.Message}");
+        //    }
+        //}
 
         public async Task<Response<string>> AddCustomerAsync(Customerrequest request)
         {

@@ -8,31 +8,23 @@
     {
         public static class Permissions
         {
-            public static class Task
+            public static class Orders
             {
-                public const string Create = "Task.Create";
-                public const string View = "Task.View";
-                public const string Edit = "Task.Edit";
-                public const string Delete = "Task.Delete";
-                public const string Assign = "Task.Assign";
-                public const string Archive = "Task.Archive";
-                public const string Comment = "Task.Comment";
-                public const string Upload = "Task.Upload";
+                public const string Create = "Orders.Create";
+                public const string View = "Orders.View";
+                public const string Edit = "Orders.Edit";
+                public const string Delete = "Orders.Delete";
+                public const string Assign = "Orders.Assign";
             }
-            public static class Project
-            {
-                public const string Create = "Project.Create";
-                public const string View = "Project.View";
-                public const string Edit = "Project.Edit";
-                public const string Delete = "Project.Delete";
-                public const string AssignLead = "Project.AssignLead";
-                public const string Archive = "Project.Archive";
-                public const string ManageMembers = "Project.ManageMembers";
-                public const string UploadFiles = "Project.UploadFiles";
-            }
+        public static class  Customers
+        {
+            public const string Create = "Customers.Create";
+            public const string View = "Customers.View";
+            public const string Edit = "Customers.Edit";
+            public const string Delete = "Customers.Delete";
+        }
 
-
-            public static class User
+        public static class User
             {
                 public const string Create = "User.Create";
                 public const string View = "User.View";

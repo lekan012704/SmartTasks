@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 namespace SmartTask.Identity.Services
 {
-    using Azure.Core;
     using Microsoft.AspNetCore.Identity;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;

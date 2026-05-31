@@ -1,11 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SmartTask.Api.Filter;
 using SmartTask.Application.Command.Customer;
 using SmartTask.Application.Dto.Customer;
 using SmartTask.Application.Features.Orders.Commands;
 using SmartTask.Application.Features.Orders.Queries;
 using SmartTask.Application.Query.Customer;
 using SmartTask.Application.Query.Order;
+using SmartTask.Domain.Constants;
 
 namespace SmartTask.Api.Controllers
 {
@@ -19,6 +21,7 @@ namespace SmartTask.Api.Controllers
         {
             _mediator = mediator;
         }
+        [HasPermission(Permissions.Customers.View)]
         [HttpGet("get-customers")]
         public async Task<IActionResult> GetCustomers([FromQuery] GetAllCustomersQuery query)
         {
@@ -26,6 +29,7 @@ namespace SmartTask.Api.Controllers
 
             return Ok(result);
         }
+        [HasPermission(Permissions.Customers.Create)]
         [HttpPost("create-customer")]
         public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerCommand request)
         {
@@ -37,12 +41,14 @@ namespace SmartTask.Api.Controllers
                 new { id = newCustomerId }
             );
         }
+        [HasPermission(Permissions.Customers.View)]
         [HttpGet("get-customer-by-id")]
         public async Task<IActionResult> GetCustomerById([FromQuery] GetCustomerByIdQuery query)
         {
             var result = await _mediator.Send(query);
             return Ok(result);
         }
+        [HasPermission(Permissions.Customers.Edit)]
         [HttpPatch("{id:guid}")]
         public async Task<IActionResult> UpdateCustomer(Guid id, [FromBody] UpdateCustomer dto)
         {
@@ -50,8 +56,9 @@ namespace SmartTask.Api.Controllers
             await _mediator.Send(command);
             return NoContent();
         }
+        [HasPermission(Permissions.Customers.Delete)]
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> DeleteCuatomer(Guid id)
+        public async Task<IActionResult> DeleteCustomer(Guid id)
         {
 
             var command = new DeleteCustomerCommand { CustomerId = id };

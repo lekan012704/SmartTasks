@@ -10,14 +10,6 @@ public static class RolePermissionSeeder
     {
         { "SuperAdmin", new()
             {
-                Permissions.Task.Create,
-                Permissions.Task.Edit,
-                Permissions.Task.Delete,
-                Permissions.Task.Comment,
-                Permissions.Task.View,
-                Permissions.Task.Archive,
-                Permissions.Task.Assign,
-                Permissions.Task.Upload,
                 Permissions.User.Create,
                 Permissions.User.AssignRole,
                 Permissions.User.Delete,
@@ -25,28 +17,36 @@ public static class RolePermissionSeeder
                 Permissions.User.Activate,
                 Permissions.User.Deactivate,
                 Permissions.User.Edit,
-                Permissions.Role.AssignPermissions,
-                Permissions.Role.Delete,
-                Permissions.Role.View,
-                Permissions.Role.Create,
-                Permissions.Role.Edit,
                 Permissions.Report.View,
                 Permissions.Report.Generate,
                 Permissions.Report.Export,
                 Permissions.Audit.View,
                 Permissions.Audit.Download,
                 Permissions.Settings.Update,
-                Permissions.Settings.View
+                Permissions.Settings.View,
+                Permissions.Company.Edit,
+                Permissions.Company.View,
+                Permissions.Company.AssignUsers,
+                Permissions.Company.Delete,
+                Permissions.Orders.Delete,
+                Permissions.Orders.View,
+                Permissions.Orders.Create,
+                Permissions.Orders.Edit,
+                Permissions.Orders.View,
+                Permissions.Orders.Assign,
+                Permissions.Customers.Delete,
+                Permissions.Customers.View,
+                Permissions.Customers.Create,
+                Permissions.Customers.Edit,
+                Permissions.Role.AssignPermissions,
+                Permissions.Role.View,
+                Permissions.Role.Create,
+                Permissions.Role.Edit,
+                Permissions.Role.Delete
             }
         },
         { "CompanyAdmin", new()
             {
-                Permissions.Task.Create,
-                Permissions.Task.Assign,
-                Permissions.Task.Edit,
-                Permissions.Task.Delete,
-                Permissions.Task.View,
-                Permissions.Task.Archive,
                 Permissions.User.Create,
                 Permissions.User.AssignRole,
                 Permissions.User.Delete,
@@ -54,19 +54,32 @@ public static class RolePermissionSeeder
                 Permissions.User.Activate,
                 Permissions.User.Deactivate,
                 Permissions.User.Edit,
-                Permissions.Report.View
-            }
-        },
-        { "Developer", new()
-            {
-                Permissions.Task.View,
-                Permissions.Task.Edit,
-                Permissions.Task.Comment
-            }
-        },
-        { "User", new()
-            {
-                 Permissions.Task.View
+                Permissions.Report.View,
+                Permissions.Report.Generate,
+                Permissions.Report.Export,
+                Permissions.Audit.View, 
+                Permissions.Audit.Download,
+                Permissions.Settings.Update,
+                Permissions.Settings.View,
+                Permissions.Company.Edit,
+                Permissions.Company.View,
+                Permissions.Company.AssignUsers,
+                Permissions.Company.Delete,
+                Permissions.Orders.Delete,
+                Permissions.Orders.View,
+                Permissions.Orders.Create,
+                Permissions.Orders.Edit,
+                Permissions.Orders.View,
+                Permissions.Orders.Assign,
+                Permissions.Customers.Delete,
+                Permissions.Customers.View,
+                Permissions.Customers.Create,
+                Permissions.Customers.Edit,
+                Permissions.Role.AssignPermissions,
+                Permissions.Role.View,
+                Permissions.Role.Create,
+                Permissions.Role.Edit,
+                Permissions.Role.Delete
             }
         }
     };

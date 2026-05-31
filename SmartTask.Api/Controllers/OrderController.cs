@@ -2,12 +2,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SmartTask.Api.Filter;
 using SmartTask.Application.Command;
 using SmartTask.Application.Command.Order;
 using SmartTask.Application.Features.Orders.Commands;
 using SmartTask.Application.Features.Orders.Queries;
 using SmartTask.Application.Query;
 using SmartTask.Application.Query.Order;
+using SmartTask.Domain.Constants;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SmartTask.Api.Controllers
@@ -23,6 +25,7 @@ namespace SmartTask.Api.Controllers
         {
             _mediator = mediator;
         }
+        [HasPermission(Permissions.Orders.Create)]
         [HttpPost("create-order")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderCommand request)
         {
@@ -34,19 +37,20 @@ namespace SmartTask.Api.Controllers
                 new { id = newOrderId } 
             );
         }
-        [HttpPost("fulfill-batch-manually")]
-        public async Task<IActionResult> FulfillBatchManually([FromBody] FulfillBatchManuallyDto dto)
-        {
-            
-            var command = new FulfillBatchManuallyCommand
-            {
-                OrderIds = dto.OrderIds,
-                ManualRiderName = dto.ManualRiderName,
-                ManualTrackingInfo = dto.ManualTrackingInfo
-            };
-            await _mediator.Send(command);
-            return NoContent();
-        }
+        //[HttpPost("fulfill-batch-manually")]
+        //public async Task<IActionResult> FulfillBatchManually([FromBody] FulfillBatchManuallyDto dto)
+        //{
+
+        //    var command = new FulfillBatchManuallyCommand
+        //    {
+        //        OrderIds = dto.OrderIds,
+        //        ManualRiderName = dto.ManualRiderName,
+        //        ManualTrackingInfo = dto.ManualTrackingInfo
+        //    };
+        //    await _mediator.Send(command);
+        //    return NoContent();
+        //}
+        [HasPermission(Permissions.Orders.View)]
         [HttpGet("get-orders")]
         public async Task<IActionResult> GetOrders([FromQuery] GetAllOrdersQuery query)
         {
@@ -55,12 +59,14 @@ namespace SmartTask.Api.Controllers
             return Ok(result);
         }
         
+        [HasPermission(Permissions.Orders.View)]
         [HttpGet("get-order-by-id")]
         public async Task<IActionResult> GetOrderById([FromQuery]GetOrderByIdQuery query)
         {
             var result = await _mediator.Send(query);
             return Ok(result);
         }
+        [HasPermission(Permissions.Orders.Edit)]
         [HttpPatch("{id:guid}/status")]
         public async Task<IActionResult> UpdateOrderStatus(Guid id, [FromBody] UpdateOrderStatusDto dto)
         {
@@ -72,6 +78,7 @@ namespace SmartTask.Api.Controllers
             await _mediator.Send(command);
             return NoContent();
         }
+        [HasPermission(Permissions.Orders.View)]
         [HttpGet("stats")]
         public async Task<IActionResult> GetDashboardStats()
         {
@@ -79,6 +86,7 @@ namespace SmartTask.Api.Controllers
             var stats = await _mediator.Send(query);
             return Ok(stats);
         }
+        [HasPermission(Permissions.Orders.Delete)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteOrder(Guid id)
         {
@@ -87,13 +95,13 @@ namespace SmartTask.Api.Controllers
             await _mediator.Send(command);
             return NoContent();
         }
-        [HttpPost("{id:guid}/book-dispatch")]
-        public async Task<IActionResult> BookDispatch(Guid id)
-        {
+        //[HttpPost("{id:guid}/book-dispatch")]
+        //public async Task<IActionResult> BookDispatch(Guid id)
+        //{
           
-            var command = new BookDispatchCommand { OrderId = id };
-            var dispatchDetails = await _mediator.Send(command);
-            return Ok(dispatchDetails);
-        }
+        //    var command = new BookDispatchCommand { OrderId = id };
+        //    var dispatchDetails = await _mediator.Send(command);
+        //    return Ok(dispatchDetails);
+        //}
     }
 }

@@ -31,9 +31,9 @@ namespace SmartTask.Persistence.Contexts
         }
 
         public virtual DbSet<Company> Company { get; set; }
-        public virtual DbSet<AddressBook> AddressBook { get; set; }
+        //public virtual DbSet<AddressBook> AddressBook { get; set; }
         public virtual DbSet<Order> Order { get; set; }
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        //public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Permission> Permission { get; set; }   
         public DbSet<RolePermission> RolePermission { get; set; }
         public DbSet<Notification> Notification { get; set; }

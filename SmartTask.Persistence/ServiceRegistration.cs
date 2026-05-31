@@ -1,7 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using SmartTask.Application.Interfaces;
 using SmartTask.Domain.Entities;
 using SmartTask.Identity.Services;
@@ -23,7 +23,7 @@ namespace SmartTask.Persistence
         public static void AddPersistenceInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
             services.AddScoped<IEntityManagerAsync, EntityMangerAsync>();
             services.AddScoped<IAuditLogRepository, AuditRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -37,7 +37,7 @@ namespace SmartTask.Persistence
             services.AddScoped<IRoleService, RoleService>();
             services.AddTransient<INotificationService, NotificationService>();
             services.AddTransient<IDbConnection>(sp =>
-    new SqlConnection(configuration.GetConnectionString("DefaultConnection")));
+    new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
             services.AddScoped(typeof(IGenericRepositoryAsync<>), typeof(GenericRepositoryAsync<>));
             services.Configure<AppSettings>(options => configuration.GetSection("AppSettings"));
 

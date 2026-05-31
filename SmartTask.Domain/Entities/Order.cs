@@ -25,7 +25,6 @@ namespace SmartTask.Domain.Entities
         public string? DriverName { get; set; }
         public string? DriverPhone { get; set; }
 
-        // ... rest of your existing fields unchanged
         public string DeliveryAddress { get; set; } = string.Empty;
         public string OrderItemsJson { get; set; } = string.Empty;
         public decimal Subtotal { get; set; }

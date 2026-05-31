@@ -39,7 +39,7 @@ namespace SmartTask.Api
                 options.AddDefaultPolicy(policy =>
                 {
                     policy.WithOrigins(
-                            builder.Configuration["AllowedOrigins"] ?? "https://smart-seller-frontend.vercel.app/"
+                            builder.Configuration["AllowedOrigins"] ?? "http://localhost:3000"
                           )
                           .AllowAnyHeader()
                           .AllowAnyMethod()

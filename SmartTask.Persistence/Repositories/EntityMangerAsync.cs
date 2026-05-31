@@ -61,12 +61,12 @@ namespace SmartTask.Persistence.Repositories
         private readonly IAuditLogRepository _auditLogRepo;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IShipBubbleService _shipBubbleService;
+        //private readonly IShipBubbleService _shipBubbleService;
         private readonly IBackgroundJobClient _jobClient;
         private readonly IEmailService _mailService;
         private readonly IPaystackService _paystackService;
         private readonly AppSettings _appSettings;
-        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IShipBubbleService shipBubbleService, IBackgroundJobClient jobClient, IEmailService mailService, IPaystackService paystackService, IOptions<AppSettings> appSettings)
+        public EntityMangerAsync(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, RoleManager<IdentityRole> roleManager, IAuthenticatedUserService authenticatedUserService, ILogger<EntityMangerAsync> logger, IDbConnection dbConnection, IAuditLogRepository auditLogRepo, IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IBackgroundJobClient jobClient, IEmailService mailService, IPaystackService paystackService, IOptions<AppSettings> appSettings)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -78,7 +78,7 @@ namespace SmartTask.Persistence.Repositories
             _auditLogRepo = auditLogRepo;
             _unitOfWork = unitOfWork;
             _httpClientFactory = httpClientFactory;
-            _shipBubbleService = shipBubbleService;
+            //_shipBubbleService = shipBubbleService;
             _jobClient = jobClient;
             _mailService = mailService;
             _paystackService = paystackService;

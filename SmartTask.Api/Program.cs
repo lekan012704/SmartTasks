@@ -95,7 +95,7 @@ namespace SmartTask.Api
                     }
                 });
             });
-
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

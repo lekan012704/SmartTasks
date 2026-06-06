@@ -89,7 +89,6 @@ namespace SmartTask.Persistence.Repositories
         public async Task<Response<CompanyResponse>> RegisterCompanyAsync(CompanyRequest request)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
                 if (await _unitOfWork.Companies.CompanyExistsAsync(request.CompanyName))
@@ -111,7 +110,6 @@ namespace SmartTask.Persistence.Repositories
                     Type = (Application.Enums.CompanyType)request.CompanyType,
                     Country = request.Country
                 };
-
                 await _unitOfWork.Companies.AddAsync(company);
 
                 var user = new ApplicationUser
@@ -126,8 +124,8 @@ namespace SmartTask.Persistence.Repositories
                     DateCreated = DateTime.UtcNow,
                     Type = request.CompanyType,
                     PhoneNumber = request.PhoneNumber
-
                 };
+
                 var result = await _userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)
                 {
@@ -138,15 +136,54 @@ namespace SmartTask.Persistence.Repositories
                     );
                 }
 
-                const string role = "CompanyAdmin";
-                if (!await _roleManager.RoleExistsAsync(role))
+                // 1. Get or create CompanyAdmin role
+                const string roleName = "CompanyAdmin";
+                var role = await _roleManager.FindByNameAsync(roleName);
+                if (role == null)
                 {
-                    await _roleManager.CreateAsync(new IdentityRole(role));
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(roleName));
+                    if (!roleResult.Succeeded)
+                    {
+                        await transaction.RollbackAsync();
+                        return ApplicationConstants.FailureMessage<CompanyResponse>(
+                            null,
+                            $"Failed to create role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}"
+                        );
+                    }
+                    role = await _roleManager.FindByNameAsync(roleName);
                 }
 
-                await _userManager.AddToRoleAsync(user, role);
+                // 2. Assign CompanyAdmin role to the user
+                await _userManager.AddToRoleAsync(user, roleName);
 
-                // Commit changes using Unit of Work
+                // 3. Get all seeded permissions
+                var allPermissions = await _context.Permission.ToListAsync();
+
+                if (allPermissions.Any())
+                {
+                    // 4. Get permissions already assigned to this role (avoid duplicates)
+                    var existingRolePermissionIds = await _context.RolePermission
+                        .Where(rp => rp.RoleId == role.Id)
+                        .Select(rp => rp.PermissionId)
+                        .ToListAsync();
+
+                    // 5. Assign all missing permissions to CompanyAdmin role
+                    var newRolePermissions = allPermissions
+                        .Where(p => !existingRolePermissionIds.Contains(p.Id))
+                        .Select(p => new RolePermission
+                        {
+                            RoleId = role.Id,
+                            PermissionId = p.Id
+                        })
+                        .ToList();
+
+                    if (newRolePermissions.Any())
+                    {
+                        await _context.RolePermission.AddRangeAsync(newRolePermissions);
+                    }
+                }
+
+                // 6. Commit everything
                 await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -157,7 +194,10 @@ namespace SmartTask.Persistence.Repositories
                     Email = request.Email
                 };
 
-                return ApplicationConstants.SuccessMessage(data, $"Company {request.CompanyName} registered successfully with user {request.Email}.");
+                return ApplicationConstants.SuccessMessage(
+                    data,
+                    $"Company {request.CompanyName} registered successfully with user {request.Email}."
+                );
             }
             catch (Exception ex)
             {
@@ -166,7 +206,6 @@ namespace SmartTask.Persistence.Repositories
                 return ApplicationConstants.FailureMessage<CompanyResponse>(null, "An error occurred while registering the company.");
             }
         }
-
 
 
         public async Task<bool> UserExistsInCompanyAsync(string email)

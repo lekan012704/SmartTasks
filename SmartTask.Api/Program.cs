@@ -159,9 +159,10 @@ namespace SmartTask.Api
                 }
             }
 
-            // Render injects PORT env variable — bind to it
+            //// Render injects PORT env variable — bind to it
             var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
             app.Run($"http://0.0.0.0:{port}");
+            //app.Run();
         }
     }
 }

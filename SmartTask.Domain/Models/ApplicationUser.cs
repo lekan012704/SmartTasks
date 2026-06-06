@@ -31,7 +31,7 @@ namespace SmartTask.Domain.Models
         public DateTime? DateDisabled { get; set; }
         public bool? IsDeleted { get; set; }
         public DateTime? DeletedOn { get; set; }
-        public DateTime? DateCreated { get; set; } = DateTime.Now;
+        public DateTime? DateCreated { get; set; } = DateTime.UtcNow;
         public string? DeletedBy { get; set; }
         public string CreatedBy { get; set; }
         public DateTime? LastUpdated { get; set; }

@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using SmartTask.Application.Command;
 using SmartTask.Application.Constants;
@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SmartTask.Identity.Services
@@ -24,17 +23,29 @@ namespace SmartTask.Identity.Services
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<RoleService> _logger;
-        public RoleService(RoleManager<IdentityRole> roleManager, UserManager<ApplicationUser> userManager, ILogger<RoleService> logger)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public RoleService(
+            RoleManager<IdentityRole> roleManager,
+            UserManager<ApplicationUser> userManager,
+            ILogger<RoleService> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
-            // Constructor logic can be added here if needed
             _roleManager = roleManager;
             _userManager = userManager;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
+
+        // Helper to get CompanyId from the current user's JWT
+        private string? GetCurrentCompanyId() =>
+            _httpContextAccessor.HttpContext?.User.FindFirst("CompanyId")?.Value;
+
         public async Task<bool> RoleExistsAsync(string roleName)
         {
             return await _roleManager.RoleExistsAsync(roleName);
         }
+
         public async Task<Response<string>> CreateRoleAsync(CreateRoleModel request)
         {
             try
@@ -48,14 +59,22 @@ namespace SmartTask.Identity.Services
                 if (!result.Succeeded)
                     return ApplicationConstants.FailureMessage($"Failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
-                // Add claims if provided
+                // Tag role with CompanyId so we can filter later
+                var companyId = request.CompanyId ?? GetCurrentCompanyId();
+                if (!string.IsNullOrEmpty(companyId))
+                {
+                    await _roleManager.AddClaimAsync(identityRole, new Claim("companyId", companyId));
+                }
+
+                // Add permission claims
                 if (request.Claims != null && request.Claims.Any())
                 {
                     foreach (var claim in request.Claims)
                     {
-                        await _roleManager.AddClaimAsync(identityRole, new System.Security.Claims.Claim("permission", claim));
+                        await _roleManager.AddClaimAsync(identityRole, new Claim("permission", claim));
                     }
                 }
+
                 return ApplicationConstants.SuccessMessage("Role created successfully.");
             }
             catch (Exception ex)
@@ -65,66 +84,26 @@ namespace SmartTask.Identity.Services
             }
         }
 
-        public async Task<Response<string>> AddCustomerAsync(Customerrequest request)
-        {
-            try
-            {
-              var customer = new Customer
-                {
-                    Name = request.Name,
-                    Email = request.Email,
-                    PhoneNumber = request.PhoneNumber,
-                    WhatsAppNumber = request.WhatsAppNumber,
-                    Address = request.Address
-                };
-                // Simulate adding the customer to the database (replace with actual DB code)
-                await Task.Delay(100); // Simulating async database operation
-                return
-              ApplicationConstants.SuccessMessage("Role with permissions created successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating role with permissions");
-                return ApplicationConstants.FailureMessage("An error occurred while creating the role with permissions.");
-            }
-        }
-
-
-        public async Task<Response<string>> AssignRoleToUserAsync(string userId, string roleName)
-        {
-            try
-            {
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
-                    return ApplicationConstants.NotFoundMessage("User not found.");
-
-                if (!await RoleExistsAsync(roleName))
-                    return ApplicationConstants.NotFoundMessage($"Role '{roleName}' does not exist.");
-
-                var result = await _userManager.AddToRoleAsync(user, roleName);
-
-                if (!result.Succeeded)
-                    return ApplicationConstants.FailureMessage($"Failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-
-                return ApplicationConstants.SuccessMessage("Role assigned successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error assigning role to user");
-                return ApplicationConstants.FailureMessage("An error occurred while assigning the role to the user.");
-            }
-        }
-
         public async Task<Response<List<RoleDto>>> GetAllRolesAsync()
         {
             try
             {
+                var companyId = GetCurrentCompanyId();
                 var roles = _roleManager.Roles.ToList();
                 var roleDtos = new List<RoleDto>();
 
                 foreach (var role in roles)
                 {
                     var claims = await _roleManager.GetClaimsAsync(role);
+
+                    // System roles (SuperAdmin, CompanyAdmin) have no companyId claim → show to everyone
+                    // Company-specific roles → only show to matching company
+                    var roleCompanyId = claims.FirstOrDefault(c => c.Type == "companyId")?.Value;
+                    var isSystemRole = roleCompanyId == null;
+                    var belongsToCompany = roleCompanyId == companyId;
+
+                    if (!isSystemRole && !belongsToCompany)
+                        continue;
 
                     roleDtos.Add(new RoleDto
                     {
@@ -149,7 +128,6 @@ namespace SmartTask.Identity.Services
                 return ApplicationConstants.FailureMessage<List<RoleDto>>(null, "An error occurred while fetching roles.");
             }
         }
-
 
         public async Task<Response<RoleDto?>> GetRoleByIdAsync(string id)
         {
@@ -184,7 +162,6 @@ namespace SmartTask.Identity.Services
             }
         }
 
-
         public async Task<Response<string>> UpdateRoleAsync(UpdateRoleCommand request)
         {
             try
@@ -198,16 +175,21 @@ namespace SmartTask.Identity.Services
                 if (!result.Succeeded)
                     return ApplicationConstants.FailureMessage($"Update failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
+                // Preserve companyId claim, only replace permission claims
                 var existingClaims = await _roleManager.GetClaimsAsync(role);
-                foreach (var claim in existingClaims)
-                {
-                    await _roleManager.RemoveClaimAsync(role, claim);
-                }
+                var companyIdClaim = existingClaims.FirstOrDefault(c => c.Type == "companyId");
 
+                // Remove all claims
+                foreach (var claim in existingClaims)
+                    await _roleManager.RemoveClaimAsync(role, claim);
+
+                // Re-add companyId claim if it existed
+                if (companyIdClaim != null)
+                    await _roleManager.AddClaimAsync(role, companyIdClaim);
+
+                // Re-add permission claims
                 foreach (var claimValue in request.Claims.Distinct())
-                {
-                    await _roleManager.AddClaimAsync(role, new Claim("Permission", claimValue));
-                }
+                    await _roleManager.AddClaimAsync(role, new Claim("permission", claimValue));
 
                 return ApplicationConstants.SuccessMessage("Role updated successfully.");
             }
@@ -235,6 +217,31 @@ namespace SmartTask.Identity.Services
             {
                 _logger.LogError(ex, "Error deleting role");
                 return ApplicationConstants.FailureMessage("An error occurred while deleting the role.");
+            }
+        }
+
+        public async Task<Response<string>> AssignRoleToUserAsync(string userId, string roleName)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return ApplicationConstants.NotFoundMessage("User not found.");
+
+                if (!await RoleExistsAsync(roleName))
+                    return ApplicationConstants.NotFoundMessage($"Role '{roleName}' does not exist.");
+
+                var result = await _userManager.AddToRoleAsync(user, roleName);
+
+                if (!result.Succeeded)
+                    return ApplicationConstants.FailureMessage($"Failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+                return ApplicationConstants.SuccessMessage("Role assigned successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning role to user");
+                return ApplicationConstants.FailureMessage("An error occurred while assigning the role to the user.");
             }
         }
 
@@ -291,9 +298,9 @@ namespace SmartTask.Identity.Services
                 var existingClaims = await _roleManager.GetClaimsAsync(role);
                 foreach (var claimValue in claims.Distinct())
                 {
-                    if (!existingClaims.Any(c => c.Type == "Permission" && c.Value == claimValue))
+                    if (!existingClaims.Any(c => c.Type == "permission" && c.Value == claimValue))
                     {
-                        await _roleManager.AddClaimAsync(role, new Claim("Permission", claimValue));
+                        await _roleManager.AddClaimAsync(role, new Claim("permission", claimValue));
                     }
                 }
 
@@ -303,61 +310,43 @@ namespace SmartTask.Identity.Services
             {
                 _logger.LogError(ex, "Error adding claims to role");
                 return ApplicationConstants.FailureMessage("An error occurred while adding claims to the role.");
-
-
             }
         }
+
         public async Task<Response<List<string>>> AddPermissionUserAsync(AssignUserPermissionsDto request)
         {
-            // Define the specific claim type used for application permissions.
             const string PermissionClaimType = "permission";
 
-          
             if (request == null || string.IsNullOrWhiteSpace(request.UserId) || request.Permissions == null)
-            {
                 return ApplicationConstants.FailureMessage<List<string>>(null, "Invalid request: UserId and Permissions list are required.");
-            }
 
             try
             {
-               
                 var user = await _userManager.FindByIdAsync(request.UserId);
                 if (user == null)
-                {
-                    
                     return ApplicationConstants.NotFoundMessage<List<string>>(null, $"User with ID '{request.UserId}' not found.");
-                }
 
-          
-
-               
                 var currentClaims = await _userManager.GetClaimsAsync(user);
-               
                 var claimsToRemove = currentClaims.Where(c => c.Type == PermissionClaimType).ToList();
 
-              
                 if (claimsToRemove.Any())
                 {
                     var removeResult = await _userManager.RemoveClaimsAsync(user, claimsToRemove);
                     if (!removeResult.Succeeded)
                     {
-                        
                         _logger.LogError("Failed to remove existing permission claims for user {UserId}: {Errors}",
                             user.Id, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
-              
                         return ApplicationConstants.FailureMessage<List<string>>(null, "Failed to remove existing permissions before assigning new ones.");
                     }
-                    _logger.LogInformation("Removed {Count} existing permission claims for user {UserId}.", claimsToRemove.Count, user.Id);
                 }
 
                 var claimsToAdd = request.Permissions
-                                         .Distinct() 
-                                         .Select(permissionName => new Claim(PermissionClaimType, permissionName))
-                                         .ToList();
+                    .Distinct()
+                    .Select(p => new Claim(PermissionClaimType, p))
+                    .ToList();
 
                 if (claimsToAdd.Any())
                 {
-
                     var addResult = await _userManager.AddClaimsAsync(user, claimsToAdd);
                     if (!addResult.Succeeded)
                     {
@@ -367,11 +356,8 @@ namespace SmartTask.Identity.Services
                     }
                 }
 
-
-                _logger.LogInformation("Successfully updated permissions for user {UserId}. Assigned {Count} permissions.",
-                    user.Id, claimsToAdd.Count);
                 return ApplicationConstants.SuccessMessage(
-                    claimsToAdd.Select(c => c.Value).ToList(), 
+                    claimsToAdd.Select(c => c.Value).ToList(),
                     $"Permissions updated successfully for user '{user.UserName}'."
                 );
             }
@@ -382,7 +368,26 @@ namespace SmartTask.Identity.Services
             }
         }
 
-
+        public async Task<Response<string>> AddCustomerAsync(Customerrequest request)
+        {
+            try
+            {
+                var customer = new Customer
+                {
+                    Name = request.Name,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    WhatsAppNumber = request.WhatsAppNumber,
+                    Address = request.Address
+                };
+                await Task.Delay(100);
+                return ApplicationConstants.SuccessMessage("Customer added successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding customer");
+                return ApplicationConstants.FailureMessage("An error occurred while adding the customer.");
+            }
+        }
     }
 }
-

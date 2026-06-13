@@ -95,6 +95,7 @@ namespace SmartTask.Api
                     }
                 });
             });
+            builder.Services.AddHttpContextAccessor();
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             var app = builder.Build();
 

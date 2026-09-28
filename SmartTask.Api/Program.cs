@@ -39,7 +39,7 @@ namespace SmartTask.Api
                 options.AddDefaultPolicy(policy =>
                 {
                     policy.WithOrigins(
-                            builder.Configuration["AllowedOrigins"] ?? "http://localhost:3000"
+                            builder.Configuration["AllowedOrigins"] ?? "http://localhost:3000" ?? "http://localhost:8080"
                           )
                           .AllowAnyHeader()
                           .AllowAnyMethod()
